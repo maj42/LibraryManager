@@ -1,0 +1,78 @@
+﻿[
+  {
+    "Aliases": [ "Alto Sax 1", "Alto Saxophone 1", "Alto Sax1", "AS1", "AltoSax1", "Альт-саксофон 1", "Альт саксофон 1", "Flute", "Флейта", "AltoSax 1" ],
+    "Weight": 100
+  },
+  {
+    "Aliases": [ "Alto Sax 2", "Alto Saxophone 2", "Alto Sax2", "AS2", "AltoSax2", "Альт-саксофон 2", "Альт саксофон 2" ],
+    "Weight": 110
+  },
+  {
+    "Aliases": [ "Tenor Sax 1", "Tenor Saxophone 1", "Tenor Sax1", "TS1", "TenorSax1", "Тенор саксофон 1", "Тенор-саксофон 1" ],
+    "Weight": 120
+  },
+  {
+    "Aliases": [ "Tenor Sax 2", "Tenor Saxophone 2", "Tenor Sax2", "TS2", "TenorSax2", "Тенор саксофон 2", "Тенор-саксофон 2" ],
+    "Weight": 130
+  },
+  {
+    "Aliases": [ "Bari Sax", "Baritone Saxophone", "BS", "BariSax", "Баритон-саксофон", "Баритон саксофон" ],
+    "Weight": 140
+  },
+  {
+    "Aliases": [ "Mellophone 1", "MF1", "Horn in F 1", "Horn in F1", "Меллофон 1", "Валторна 1" ],
+    "Weight": 200
+  },
+  {
+    "Aliases": [ "Mellophone 2", "MF2", "Horn in F 2", "Horn in F2", "Меллофон 2", "Валторна 2" ],
+    "Weight": 210
+  },
+  {
+    "Aliases": [ "Trupmet 1", "Trumpet1", "Tpt1", "Труба 1" ],
+    "Weight": 220
+  },
+  {
+    "Aliases": [ "Trombone 1", "Trombone1", "Тромбон 1", "Тромбон1", "Tbn1" ],
+    "Weight": 300
+  },
+  {
+    "Aliases": [ "Trombone 2", "Trombone2", "Тромбон 2", "Тромбон2", "Tbn2" ],
+    "Weight": 310
+  },
+  {
+    "Aliases": [ "Trombone 3", "Trombone3", "Тромбон 3", "Тромбон3", "Tbn3" ],
+    "Weight": 320
+  },
+  {
+    "Aliases": [ "Trombone 4", "Trombone4", "Тромбон 4", "Тромбон4", "Tbn4", "Bass Trombone", "Бас-тромбон" ],
+    "Weight": 340
+  },
+  {
+    "Aliases": [ "Guitar", "Electric Guitar", "Gtr", "Гитара", "Электрогитара", "Acoustic Guitar" ],
+    "Weight": 400
+  },
+  {
+    "Aliases": [ "Bass Guitar", "Bass", "Бас-гитара" ],
+    "Weight": 440
+  },
+  {
+    "Aliases": [ "Drum Set", "Drums", "DS", "Ударная установка" ],
+    "Weight": 450
+  },
+  {
+    "Aliases": [ "Violin 1", "Violin I", "Vln1", "Скрипка 1" ],
+    "Weight": 500
+  },
+  {
+    "Aliases": [ "Violin 2", "Violin II", "Vln2", "Скрипка 2" ],
+    "Weight": 510
+  },
+  {
+    "Aliases": [ "Viola", "VlaАльт" ],
+    "Weight": 520
+  },
+  {
+    "Aliases": [ "Violoncello", "Vc", "Виолончель" ],
+    "Weight": 530
+  }
+]
