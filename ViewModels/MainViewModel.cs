@@ -359,6 +359,9 @@ namespace LibraryManager.ViewModels
             _cancellationTokenSource = new CancellationTokenSource();
             var progress = new Progress<int>(val => ProgressValue = val);
 
+            _currentPreviewDocument?.Dispose();
+            _currentPreviewDocument = null;
+
             try
             {
                 int movedFiles = 0;
@@ -373,27 +376,57 @@ namespace LibraryManager.ViewModels
                     return;
                 }
 
-                foreach (var instrument in Instruments.Where(i => i.ProgramFolderExists && i.AssignedFiles.Any()))
+                var movedFilesMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                await Task.Run(() =>
                 {
-                    string targetFolder = instrument.ProgramFolderPath;
-                    if (string.IsNullOrWhiteSpace(targetFolder))
+                    foreach (var instrument in Instruments.Where(i => i.AssignedFiles.Any()))
                     {
-                        LogHelper.AddLog(LogMessages, $"Skipping '{instrument.Name}: Program folder path is not set'", LogLevel.Error);
-                        continue;
+                        string targetFolder = instrument.ProgramFolderPath;
+
+                        if (!instrument.ProgramFolderExists || string.IsNullOrWhiteSpace(targetFolder))
+                        {
+                            LogHelper.AddLog(LogMessages, $"Skipping '{instrument.Name}: Program folder path is not set or doesn't exist.'", LogLevel.Error);
+                            continue;
+                        }
+
+                        foreach (var file in instrument.AssignedFiles.ToList())
+                        {
+                            if (file == null || string.IsNullOrWhiteSpace(file.FullPath))
+                                continue;
+
+                            string targetPath = Path.Combine(targetFolder, file.FileName);
+
+                            try
+                            {
+                                if (!movedFilesMap.ContainsKey(file.FullPath))
+                                {
+                                    File.Move(file.FullPath, targetPath);
+                                    movedFilesMap[file.FullPath] = targetPath;
+                                    movedFiles++;
+                                }
+                                else
+                                {
+                                    string sourcePath = movedFilesMap[file.FullPath];
+
+                                    if (!File.Exists(sourcePath))
+                                    {
+                                        LogHelper.AddLog(LogMessages, $"Missing source for copy: {sourcePath}", LogLevel.Error);
+                                        continue;
+                                    }
+                                    File.Copy(sourcePath, targetPath, overwrite: true);
+
+                                    LogHelper.AddLog(LogMessages, $"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Success);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                LogHelper.AddLog(LogMessages, $"Error moving '{file.FileName}' to '{instrument.Name}': {ex.Message}", LogLevel.Error);
+                            }
+                        }
                     }
-
-                    var filesToMove = instrument.AssignedFiles.ToList();
-                    var result = await _pdfFileManager.MovePdfsAsync(filesToMove, targetFolder, progress, _cancellationTokenSource.Token);
-
-                    foreach (var file in filesToMove)
-                    {
-                        PdfFiles.Remove(file);
-                    }
-
-                    logs.AddRange(result);
-                    movedFiles += filesToMove.Count;
-                }
-
+                });
+                
                 if (movedFiles == 0)
                 {
                     LogHelper.AddLog(LogMessages, "No files were moved", LogLevel.Error);

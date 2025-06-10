@@ -77,6 +77,8 @@
                              BorderThickness="0"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                              HorizontalContentAlignment="Stretch"
+                             ScrollViewer.CanContentScroll="True"
+                             VirtualizingPanel.ScrollUnit="Pixel"
                              PreviewDragOver="ScrollViewer_PreviewDragOver">
                     <ListBox.ItemTemplate>
                         <DataTemplate>

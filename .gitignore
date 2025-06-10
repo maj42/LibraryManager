@@ -2,6 +2,14 @@
 *.suo
 *.user
 *.sln.docstates
+*.vsidx
+*.db-shm
+*.db-wal
+*.dtbcache.v2
+*.v2
+*.bin
+v17/
+.vs/
 
 # Build results
 
@@ -10,6 +18,7 @@
 x64/
 [Bb]in/
 [Oo]bj/
+[Pp]roject[Ee]valuation/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
