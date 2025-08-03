@@ -7,7 +7,6 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Forms;
-using System.Windows;
 using System;
 using System.Windows.Media.Imaging;
 using System.Threading;
@@ -15,7 +14,7 @@ using System.Linq;
 using System.Collections.Generic;
 using PdfiumViewer;
 using System.Drawing;
-using System.Drawing.Imaging;
+
 
 namespace LibraryManager.ViewModels
 {
@@ -24,6 +23,7 @@ namespace LibraryManager.ViewModels
         public ObservableCollection<PdfFile> PdfFiles { get; set; } = new();
         public ObservableCollection<LogEntry> LogMessages { get; set; } = new();
         public ObservableCollection<InstrumentStatus> Instruments { get; set; } = new();
+        public readonly Stack<AssignmentOperation> _undoStack = new();
 
         public ICommand LoadFilesCommand { get; }
         public ICommand MoveFilesCommand { get; }
@@ -32,6 +32,8 @@ namespace LibraryManager.ViewModels
         public ICommand ApplyProgramCommand { get; }
         private RelayCommand _setProgramCommand;
         public ICommand AssignMatchedFilesCommand { get; }
+        public ICommand UndoCommand => _undoCommand;
+        private readonly RelayCommand _undoCommand;
 
         public ICommand CreateProgramFoldersCommand => _createProgramFoldersCommand;
         private RelayCommand _nextPageCommand;
@@ -63,6 +65,7 @@ namespace LibraryManager.ViewModels
             AssignMatchedFilesCommand = new RelayCommand(AssignMatchedFiles);
             _nextPageCommand = new RelayCommand(() => PreviewPageIndex++, () => CanGoToNextPage);
             _previousPageCommand = new RelayCommand(() => PreviewPageIndex--, () => CanGoToPreviousPage);
+            _undoCommand = new RelayCommand(UndoLastAssignment, CanUndo);
         }
 
         private readonly AliasManager _aliasManager = new AliasManager();
@@ -103,7 +106,6 @@ namespace LibraryManager.ViewModels
             }
         }
         private bool _isProgramSet;
-        private bool _programCheckedOnce;
 
         private bool _canApplyProgram;
         public bool CanApplyProgram
@@ -401,9 +403,17 @@ namespace LibraryManager.ViewModels
                             {
                                 if (!movedFilesMap.ContainsKey(file.FullPath))
                                 {
+                                    if (File.Exists(targetPath))
+                                    {
+                                        File.Delete(targetPath);
+                                        LogHelper.AddLog(LogMessages, $"Overwriting existing file at '{targetPath}'", LogLevel.Info);
+                                    }
+
                                     File.Move(file.FullPath, targetPath);
                                     movedFilesMap[file.FullPath] = targetPath;
                                     movedFiles++;
+
+                                    LogHelper.AddLog(LogMessages, $"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Info);
                                 }
                                 else
                                 {
@@ -414,6 +424,13 @@ namespace LibraryManager.ViewModels
                                         LogHelper.AddLog(LogMessages, $"Missing source for copy: {sourcePath}", LogLevel.Error);
                                         continue;
                                     }
+
+                                    if (File.Exists(targetPath))
+                                    {
+                                        File.Delete(targetPath);
+                                        LogHelper.AddLog(LogMessages, $"Overwriting existing file at '{targetPath}'", LogLevel.Info);
+                                    }
+
                                     File.Copy(sourcePath, targetPath, overwrite: true);
 
                                     LogHelper.AddLog(LogMessages, $"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Success);
@@ -529,7 +546,75 @@ namespace LibraryManager.ViewModels
                 instrument.AssignedFiles.Add(file);
             }
 
+            _undoStack.Push(new AssignmentOperation
+            {
+                File = file,
+                Instrument = instrument,
+                WasCopy = copyInstead
+            });
+
+            _undoCommand.RaiseCanExecuteChanged();
+
             LogHelper.AddLog(LogMessages, $"{(copyInstead ? "Copied" : "Assigned")} '{file.FileName}' to '{instrument.Name}'", LogLevel.Success);
+        }
+
+        private void UndoLastAssignment()
+        {
+            if (_undoStack.Count == 0) return;
+
+            var op = _undoStack.Pop();
+
+            if (op.Instrument.AssignedFiles.Contains(op.File))
+            {
+                op.Instrument.AssignedFiles.Remove(op.File);
+            }
+
+            if (!op.WasCopy && !PdfFiles.Contains(op.File))
+            {
+                PdfFiles.Add(op.File);
+            }
+
+            _undoCommand.RaiseCanExecuteChanged();
+
+            LogHelper.AddLog(LogMessages, $"Undid assignment of '{op.File.FileName}' from '{op.Instrument.Name}'", LogLevel.Success);
+        }
+
+        private bool CanUndo()
+        {
+            return _undoStack.Count > 0;
+        }
+
+        public void UnassignPdfFromInstrument(PdfFile file, InstrumentStatus instrument)
+        {
+            if (instrument.AssignedFiles.Contains(file))
+            {
+                instrument.AssignedFiles.Remove(file);
+
+                _undoStack.Push(new AssignmentOperation
+                {
+                    File = file,
+                    Instrument = instrument,
+                    WasCopy = false
+                });
+            }
+
+            if (!PdfFiles.Contains(file))
+            {
+                PdfFiles.Add(file);
+            }
+
+            _undoCommand.RaiseCanExecuteChanged();
+
+            LogHelper.AddLog(LogMessages, $"Unassigned '{file.FileName}' from '{instrument.Name}'", LogLevel.Success);
+        }
+
+        public void UnassignFile(PdfFile file)
+        {
+            var instrument = Instruments.FirstOrDefault(i => i.AssignedFiles.Contains(file));
+            if (instrument != null)
+            {
+                UnassignPdfFromInstrument (file, instrument);
+            }
         }
 
         private void AssignMatchedFiles()

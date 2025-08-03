@@ -45,6 +45,18 @@ namespace LibraryManager
             }
         }
 
+        private void AssignedFile_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                var dataContext = ((FrameworkElement)sender).DataContext;
+                if (dataContext is PdfFile file)
+                {
+                    DragDrop.DoDragDrop((DependencyObject)sender, file, DragDropEffects.Move);
+                }
+            }
+        }
+
         private void Instrument_DragOver(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(typeof(PdfFile)))
@@ -93,6 +105,19 @@ namespace LibraryManager
                     bool copy = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
 
                     viewModel?.AssignPdfToInstrument(file, instrument, copy);
+                }
+            }
+        }
+
+        private void PdfFileListBox_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(PdfFile)))
+            {
+                var file = e.Data.GetData(typeof(PdfFile)) as PdfFile;
+                if (file != null)
+                {
+                    var vm = DataContext as MainViewModel;
+                    vm?.UnassignFile(file);
                 }
             }
         }

@@ -21,6 +21,11 @@
         </CollectionViewSource>
     </Window.Resources>
 
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Ctrl"
+                    Command="{Binding UndoCommand}"/>
+    </Window.InputBindings>
+
     <Grid Margin="10">
         <!-- Grid with 2 columns: Main and preview -->
         <Grid.ColumnDefinitions>
@@ -134,7 +139,8 @@
                                                   Margin="10,0,0,0">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal">
+                                            <StackPanel Orientation="Horizontal"
+                                                        PreviewMouseMove="AssignedFile_PreviewMouseMove">
                                                 <TextBlock Text="• "
                                                         Foreground="DarkSlateGray"/>
                                                 <TextBlock Text="{Binding FileName}"
@@ -194,7 +200,9 @@
         <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding PdfFiles}" 
                  SelectedItem="{Binding SelectedPdf, Mode=TwoWay}"
                  DisplayMemberPath="FileName" Margin="0,0,10,0"
-                 PreviewMouseMove="PdfFilesListBox_PreviewMouseMove"/>
+                 AllowDrop="True"
+                 PreviewMouseMove="PdfFilesListBox_PreviewMouseMove"
+                 Drop="PdfFileListBox_Drop"/>
         
         <!-- Grid Splitter -->
         <GridSplitter Grid.Row="1" Grid.Column="1" Width="5" 

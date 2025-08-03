@@ -1,34 +1,34 @@
 ﻿[
   {
-    "Aliases": [ "Alto Sax 1", "Alto Saxophone 1", "Alto Sax1", "AS1", "AltoSax1", "Альт-саксофон 1", "Альт саксофон 1", "Flute", "Флейта", "AltoSax 1" ],
+    "Aliases": [ "Alto Sax 1", "Alto Saxophone 1", "Alto Sax1", "AS1", "AltoSax1", "Альт-саксофон 1", "Альт саксофон 1", "Flute", "Флейта", "AltoSax 1", "Sax alto 1" ],
     "Weight": 100
   },
   {
-    "Aliases": [ "Alto Sax 2", "Alto Saxophone 2", "Alto Sax2", "AS2", "AltoSax2", "Альт-саксофон 2", "Альт саксофон 2" ],
+    "Aliases": [ "Alto Sax 2", "Alto Saxophone 2", "Alto Sax2", "AS2", "AltoSax2", "Альт-саксофон 2", "Альт саксофон 2", "Sax alto 2" ],
     "Weight": 110
   },
   {
-    "Aliases": [ "Tenor Sax 1", "Tenor Saxophone 1", "Tenor Sax1", "TS1", "TenorSax1", "Тенор саксофон 1", "Тенор-саксофон 1" ],
+    "Aliases": [ "Tenor Sax 1", "Tenor Saxophone 1", "Tenor Sax1", "TS1", "TenorSax1", "Тенор саксофон 1", "Тенор-саксофон 1", "Tenore Sax 1", "Sax tenor 1" ],
     "Weight": 120
   },
   {
-    "Aliases": [ "Tenor Sax 2", "Tenor Saxophone 2", "Tenor Sax2", "TS2", "TenorSax2", "Тенор саксофон 2", "Тенор-саксофон 2" ],
+    "Aliases": [ "Tenor Sax 2", "Tenor Saxophone 2", "Tenor Sax2", "TS2", "TenorSax2", "Тенор саксофон 2", "Тенор-саксофон 2", "Tenore Sax 2", "Sax tenor 2" ],
     "Weight": 130
   },
   {
-    "Aliases": [ "Bari Sax", "Baritone Saxophone", "BS", "BariSax", "Баритон-саксофон", "Баритон саксофон" ],
+    "Aliases": [ "Bari Sax", "Baritone Saxophone", "BS", "BariSax", "Баритон-саксофон", "Баритон саксофон", "Baritone Sax" ],
     "Weight": 140
   },
   {
-    "Aliases": [ "Mellophone 1", "MF1", "Horn in F 1", "Horn in F1", "Меллофон 1", "Валторна 1" ],
+    "Aliases": [ "Mellophone 1", "MF1", "Horn in F 1", "Horn in F1", "Меллофон 1", "Валторна 1", "Меллофон F 1", "Mellophone in F 1" ],
     "Weight": 200
   },
   {
-    "Aliases": [ "Mellophone 2", "MF2", "Horn in F 2", "Horn in F2", "Меллофон 2", "Валторна 2" ],
+    "Aliases": [ "Mellophone 2", "MF2", "Horn in F 2", "Horn in F2", "Меллофон 2", "Валторна 2", "Меллофон F 2", "Mellophone in F 2" ],
     "Weight": 210
   },
   {
-    "Aliases": [ "Trupmet 1", "Trumpet1", "Tpt1", "Труба 1" ],
+    "Aliases": [ "Trumpet 1", "Trumpet1", "Tpt1", "Труба 1", "Труба Bb 1" ],
     "Weight": 220
   },
   {
@@ -44,20 +44,24 @@
     "Weight": 320
   },
   {
-    "Aliases": [ "Trombone 4", "Trombone4", "Тромбон 4", "Тромбон4", "Tbn4", "Bass Trombone", "Бас-тромбон" ],
+    "Aliases": [ "Trombone 4", "Trombone4", "Тромбон 4", "Тромбон4", "Tbn4", "Bass Trombone", "Бас-тромбон", "Басовый тромбон", "Бас тромбон" ],
     "Weight": 340
   },
   {
-    "Aliases": [ "Guitar", "Electric Guitar", "Gtr", "Гитара", "Электрогитара", "Acoustic Guitar" ],
+    "Aliases": [ "Guitar", "Electric Guitar", "Gtr", "Гитара", "Электрогитара", "Acoustic Guitar", "El Guitar", "El Guit", "El. Guit", "Акустическая гитара" ],
     "Weight": 400
   },
   {
-    "Aliases": [ "Bass Guitar", "Bass", "Бас-гитара" ],
+    "Aliases": [ "Bass Guitar", " Bass", "Бас-гитара" ],
     "Weight": 440
   },
   {
-    "Aliases": [ "Drum Set", "Drums", "DS", "Ударная установка" ],
+    "Aliases": [ "Drum Set", "Drums", " DS", "Ударная установка", "Уд. установка" ],
     "Weight": 450
+  },
+  {
+    "Aliases": [ "Perc", "Percussion", "Vibraphone", "Timpani", "Tubular Bells", "Вибрафон", "Тамбурин", "SPD", "SPDSX" ],
+    "Weight": 470
   },
   {
     "Aliases": [ "Violin 1", "Violin I", "Vln1", "Скрипка 1" ],
@@ -68,11 +72,11 @@
     "Weight": 510
   },
   {
-    "Aliases": [ "Viola", "VlaАльт" ],
+    "Aliases": [ "Viola", "VlaАльт", "Vla" ],
     "Weight": 520
   },
   {
-    "Aliases": [ "Violoncello", "Vc", "Виолончель" ],
+    "Aliases": [ "Violoncello", " Vc", "Виолончель", " Vlc" ],
     "Weight": 530
   }
 ]
