@@ -23,6 +23,10 @@ namespace LibraryManager
     /// </summary>
     public partial class MainWindow : Window
     {
+        private Point _dragStartPoint;
+        private object? _originalDragSource;
+        private const double DragThreshold = 5;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -31,18 +35,37 @@ namespace LibraryManager
             DataContext = new MainViewModel(pdfFileManager);
         }
 
+        private void PdfFilesListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _dragStartPoint = e.GetPosition(null);
+
+            if (sender is ListBoxItem item && item.DataContext is PdfFile)
+            {
+                _originalDragSource = item.DataContext;
+                item.IsSelected = true;
+            }
+            else
+            {
+                _originalDragSource = null;
+            }
+        }
+
         private void PdfFilesListBox_PreviewMouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed)
+            if (e.LeftButton != MouseButtonState.Pressed || _originalDragSource is not PdfFile file)
             {
-                var listBox = sender as ListBox;
-                var pdf = listBox?.SelectedItem as PdfFile;
-
-                if (pdf != null)
-                {
-                    DragDrop.DoDragDrop(listBox, pdf, DragDropEffects.Copy);
-                }
+                return;
             }
+
+            
+            var currentPosition = e.GetPosition(null);
+            if (Math.Abs(currentPosition.X - _dragStartPoint.X) > DragThreshold ||
+                Math.Abs(currentPosition.Y - _dragStartPoint.Y) > DragThreshold)
+            {
+                _originalDragSource = null;
+                DragDrop.DoDragDrop((DependencyObject)sender, file, DragDropEffects.Copy);
+            }
+            
         }
 
         private void AssignedFile_PreviewMouseMove(object sender, MouseEventArgs e)

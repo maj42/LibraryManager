@@ -34,6 +34,7 @@ namespace LibraryManager.ViewModels
         public ICommand AssignMatchedFilesCommand { get; }
         public ICommand UndoCommand => _undoCommand;
         private readonly RelayCommand _undoCommand;
+        public ICommand ArchiveCommand { get; }
 
         public ICommand CreateProgramFoldersCommand => _createProgramFoldersCommand;
         private RelayCommand _nextPageCommand;
@@ -66,6 +67,7 @@ namespace LibraryManager.ViewModels
             _nextPageCommand = new RelayCommand(() => PreviewPageIndex++, () => CanGoToNextPage);
             _previousPageCommand = new RelayCommand(() => PreviewPageIndex--, () => CanGoToPreviousPage);
             _undoCommand = new RelayCommand(UndoLastAssignment, CanUndo);
+            ArchiveCommand = new RelayCommand(ArchiveExecute);
         }
 
         private readonly AliasManager _aliasManager = new AliasManager();
@@ -629,6 +631,72 @@ namespace LibraryManager.ViewModels
                 }
             }
             LogHelper.AddLog(LogMessages, "All matched files assigned.", LogLevel.Success);
+        }
+
+        private void ArchiveExecute()
+        {
+            if (string.IsNullOrWhiteSpace(ProgramName))
+            {
+                LogHelper.AddLog(LogMessages, "No program is currently set. Archive aborted.", LogLevel.Error);
+                return;
+            }
+
+            foreach(var instrument in Instruments)
+            {
+                if (string.IsNullOrWhiteSpace(instrument.ProgramFolderPath))
+                {
+                    LogHelper.AddLog(LogMessages, $"No program folder set for '{instrument.Name}. Skipping.'", LogLevel.Info);
+                    continue;
+                }
+
+                string sourcePath = instrument.ProgramFolderPath;
+                string archivePath = Path.Combine(_rootFolderPath, instrument.Name, "Архив");
+
+                if (!Directory.Exists(sourcePath))
+                {
+                    LogHelper.AddLog(LogMessages, $"Source folder does not exist for '{instrument.Name}'. Skipping.", LogLevel.Info);
+                    continue;
+                }
+
+                if (!Directory.Exists(archivePath))
+                {
+                    LogHelper.AddLog(LogMessages, $"Archive folder not found for '{instrument.Name}': {archivePath}", LogLevel.Error);
+                    return;
+                }
+
+                try
+                {
+                    var files = Directory.GetFiles(sourcePath);
+                    foreach (var file in files)
+                    {
+                        string fileName = Path.GetFileName(file);
+                        string destinationFile = Path.Combine(archivePath, fileName);
+
+                        if (File.Exists(destinationFile))
+                        {
+                            File.Delete(destinationFile);
+                            LogHelper.AddLog(LogMessages, $"Overwriting file in archive for '{instrument.Name}': {fileName}", LogLevel.Info);
+                        }
+
+                        File.Move(file, destinationFile);
+                    }
+
+                    if (Directory.GetFiles(sourcePath).Length == 0 && Directory.GetDirectories(sourcePath).Length == 0)
+                    {
+                        Directory.Delete(sourcePath);
+                    }
+                    instrument.AssignedFiles.Clear();
+
+                    LogHelper.AddLog(LogMessages, $"Archived files for '{instrument.Name}' to: {archivePath}", LogLevel.Success);
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.AddLog(LogMessages, $"Error archiving files for '{instrument.Name}': {ex.Message}", LogLevel.Error);
+                }
+            }
+
+            RefreshProgramPaths();
+            RefreshCommands();
         }
 
         private void RefreshProgramPaths()

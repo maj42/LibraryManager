@@ -53,6 +53,8 @@
                         Margin="0,0,10,0"/>
                 <Button Content="Move Files" Command="{Binding MoveFilesCommand}" 
                         Margin="0,0,10,0"/>
+                <Button Content="Archive" Command="{Binding ArchiveCommand}" 
+                        Margin="0,0,10,0"/>
                 <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="0,0,10,0"/>
             </StackPanel>
 
@@ -87,79 +89,67 @@
                              PreviewDragOver="ScrollViewer_PreviewDragOver">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,5">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                            <Border AllowDrop="True"
+                                DragOver="Instrument_DragOver"
+                                PreviewDragEnter="Border_PreviewDragEnter"
+                                PreviewDragLeave="Border_PreviewDragLeave"
+                                PreviewDrop="Border_PreviewDrop"
+                                Tag="{Binding}"
+                                SnapsToDevicePixels="True"
+                                Focusable="True"
+                                IsHitTestVisible="True"
+                                CornerRadius="10"
+                                Background="#0100">
 
-                                <Border Margin="0,2" CornerRadius="4"
-                                            MinHeight="40"
-                                            HorizontalAlignment="Stretch"
-                                            Padding="8" AllowDrop="True" 
-                                            DragOver="Instrument_DragOver"
-                                            PreviewDragEnter="Border_PreviewDragEnter"
-                                            PreviewDragLeave="Border_PreviewDragLeave"
-                                            PreviewDrop="Border_PreviewDrop" Tag="{Binding}"
-                                            SnapsToDevicePixels="True"
-                                            Focusable="True"
-                                            IsHitTestVisible="True"
-                                            Background="#0100">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="BorderBrush"
-                                                        Value="Transparent"/>
-                                            <Setter Property="BorderThickness"
-                                                        Value="2"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsAliasMatched}"
-                                                                 Value="True">
-                                                    <Setter Property="BorderBrush"
-                                                                Value="LightGreen"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="2"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAliasMatched}" Value="True">
+                                                <Setter Property="BorderBrush" Value="LightGreen"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <Grid Margin="0,5">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
                                     <StackPanel Orientation="Horizontal">
-                                        <CheckBox IsChecked="{Binding IsSelected}" 
-                                            VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding Name}" Margin="5,0"
-                                            VerticalAlignment="Center"/>
-                                        <TextBlock Text="(Program exists)" 
-                                            Foreground="Green"
-                                            Margin="5,0,0,0"
-                                            Visibility="{Binding ProgramFolderExists, 
-                                                    Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Name}" Margin="5,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="(Program exists)"
+                                           Foreground="Green"
+                                           Margin="5,0,0,0"
+                                           Visibility="{Binding ProgramFolderExists, 
+                                           Converter={StaticResource BoolToVisibilityConverter}}"/>
                                     </StackPanel>
-                                </Border>
 
-                                <ItemsControl Grid.Row="1" 
-                                                  ItemsSource="{Binding AssignedFiles}"
-                                                  Margin="10,0,0,0">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal"
-                                                        PreviewMouseMove="AssignedFile_PreviewMouseMove">
-                                                <TextBlock Text="• "
-                                                        Foreground="DarkSlateGray"/>
-                                                <TextBlock Text="{Binding FileName}"
-                                                        Foreground="Black" />
-                                                <TextBlock Text=" → "
-                                                        Foreground="Gray"
-                                                        Margin="5,0,0,0"
-                                                        Visibility="{Binding MatchedInstrumentName, 
-                                                        Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding MatchedInstrumentName}"
-                                                        Foreground="SlateGray"
-                                                        FontStyle="Italic"
-                                                        Visibility="{Binding MatchedInstrumentName, 
-                                                        Converter={StaticResource NullToVisibilityConverter}}"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Grid>
+                                    <ItemsControl Grid.Row="1"
+                                        ItemsSource="{Binding AssignedFiles}"
+                                        Margin="10,0,0,0">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal"
+                                                         PreviewMouseMove="AssignedFile_PreviewMouseMove">
+                                                    <TextBlock Text="• " Foreground="DarkSlateGray"/>
+                                                    <TextBlock Text="{Binding FileName}" Foreground="Black"/>
+                                                    <TextBlock Text=" → " Foreground="Gray" Margin="5,0,0,0"
+                                                         Visibility="{Binding MatchedInstrumentName, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                    <TextBlock Text="{Binding MatchedInstrumentName}" Foreground="SlateGray"
+                                                       FontStyle="Italic"
+                                                       Visibility="{Binding MatchedInstrumentName, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -202,8 +192,14 @@
                  DisplayMemberPath="FileName" Margin="0,0,10,0"
                  AllowDrop="True"
                  PreviewMouseMove="PdfFilesListBox_PreviewMouseMove"
-                 Drop="PdfFileListBox_Drop"/>
-        
+                 Drop="PdfFileListBox_Drop">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <EventSetter Event="PreviewMouseLeftButtonDown" Handler="PdfFilesListBox_PreviewMouseLeftButtonDown"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
+        </ListBox>
+
         <!-- Grid Splitter -->
         <GridSplitter Grid.Row="1" Grid.Column="1" Width="5" 
                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
