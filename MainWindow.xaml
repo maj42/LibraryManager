@@ -11,7 +11,8 @@
         mc:Ignorable="d"
         Icon="Resources/Appicon.ico"
         Title="Library Manager" Height="600" Width="1000"
-        d:DataContext="{d:DesignInstance Type=vm:MainViewModel, IsDesignTimeCreatable=True}">
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel, 
+                        IsDesignTimeCreatable=True}">
     
     <Window.Resources>
         <CollectionViewSource x:Key="ReversedLogs" Source="{Binding LogMessages}">
@@ -154,7 +155,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
             </TabItem>
-            
+
             <TabItem Header="Preview">
                 <!-- Preview/Details Panel -->
                 <Border Background="#f4f4f4" 
@@ -170,8 +171,9 @@
                                     Margin="10">
                             <Button Content="←"
                                 Command="{Binding PreviousPageCommand}"
-                                IsEnabled="{Binding CanGoToPreviousPage}"
+                                IsEnabled="{Binding CanGoToPreviousPage}" 
                                 Width="30" Margin="5"/>
+                                
                             <TextBlock Text="{Binding PreviewPageDisplay}"
                                 VerticalAlignment="Center"
                                 FontWeight="Bold" Margin="10,0"/>
@@ -187,9 +189,11 @@
         </TabControl>
         
         <!-- PDF File List -->
-        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding PdfFiles}" 
+        <ListBox Grid.Row="1" Grid.Column="0"
+                 ItemsSource="{Binding PdfFiles}" 
                  SelectedItem="{Binding SelectedPdf, Mode=TwoWay}"
-                 DisplayMemberPath="FileName" Margin="0,0,10,0"
+                 DisplayMemberPath="FileName"
+                 Margin="0,0,10,0"
                  AllowDrop="True"
                  PreviewMouseMove="PdfFilesListBox_PreviewMouseMove"
                  Drop="PdfFileListBox_Drop">

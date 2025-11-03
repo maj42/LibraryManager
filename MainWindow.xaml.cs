@@ -1,38 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using LibraryManager.Models;
-using LibraryManager.Services.FileManagement;
 using LibraryManager.ViewModels;
 
 namespace LibraryManager
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         private Point _dragStartPoint;
         private object? _originalDragSource;
         private const double DragThreshold = 5;
+        private readonly MainViewModel _viewModel;
 
-        public MainWindow()
+        public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
-
-            var pdfFileManager = new LocalPdfFileManager(); // or resolve via DI
-            DataContext = new MainViewModel(pdfFileManager);
+            _viewModel = viewModel;
+            DataContext = _viewModel;
         }
 
         private void PdfFilesListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -57,7 +46,6 @@ namespace LibraryManager
                 return;
             }
 
-            
             var currentPosition = e.GetPosition(null);
             if (Math.Abs(currentPosition.X - _dragStartPoint.X) > DragThreshold ||
                 Math.Abs(currentPosition.Y - _dragStartPoint.Y) > DragThreshold)

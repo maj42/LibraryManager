@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LibraryManager.Models;
@@ -25,7 +24,8 @@ namespace LibraryManager.Services.FileManagement
             }, token);
         }
 
-        public Task<List<string>> MovePdfsAsync(IEnumerable<PdfFile> files, string targetFolder, IProgress<int> progress = null, CancellationToken token = default)
+        public Task<List<string>> MovePdfsAsync(IEnumerable<PdfFile> files, string targetFolder, IProgress<int> progress = null, 
+            CancellationToken token = default)
         {
             return Task.Run(() =>
             {

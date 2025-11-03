@@ -1,6 +1,7 @@
 using LibraryManager.Helpers;
 using LibraryManager.Models;
 using LibraryManager.Services.FileManagement;
+using LibraryManager.Services.PdfPreview;
 using LibraryManager.Services;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -12,8 +13,6 @@ using System.Windows.Media.Imaging;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
-using PdfiumViewer;
-using System.Drawing;
 
 
 namespace LibraryManager.ViewModels
@@ -23,6 +22,7 @@ namespace LibraryManager.ViewModels
         public ObservableCollection<PdfFile> PdfFiles { get; set; } = new();
         public ObservableCollection<LogEntry> LogMessages { get; set; } = new();
         public ObservableCollection<InstrumentStatus> Instruments { get; set; } = new();
+        
         public readonly Stack<AssignmentOperation> _undoStack = new();
 
         public ICommand LoadFilesCommand { get; }
@@ -30,18 +30,18 @@ namespace LibraryManager.ViewModels
         public ICommand CancelCommand => new RelayCommand(() => _cancellationTokenSource?.Cancel());
         public ICommand SetProgramCommand { get; }
         public ICommand ApplyProgramCommand { get; }
-        private RelayCommand _setProgramCommand;
         public ICommand AssignMatchedFilesCommand { get; }
         public ICommand UndoCommand => _undoCommand;
-        private readonly RelayCommand _undoCommand;
         public ICommand ArchiveCommand { get; }
-
         public ICommand CreateProgramFoldersCommand => _createProgramFoldersCommand;
-        private RelayCommand _nextPageCommand;
-        private RelayCommand _previousPageCommand;
-
         public ICommand NextPageCommand => _nextPageCommand;
         public ICommand PreviousPageCommand => _previousPageCommand;
+        public ICommand LoadPreviewCommand { get; }
+
+        private readonly RelayCommand _undoCommand;
+        private RelayCommand _setProgramCommand;
+        private RelayCommand _nextPageCommand;
+        private RelayCommand _previousPageCommand;
         private RelayCommand _createProgramFoldersCommand;
 
         public ICommand SetProgramFolderCommand => new RelayCommand(() =>
@@ -53,9 +53,11 @@ namespace LibraryManager.ViewModels
             LogHelper.AddLog(LogMessages, "Set program folders for selected instruments", LogLevel.Success);
         });
 
-        public MainViewModel(IPdfFileManager pdfFileManager)
+        public MainViewModel(IPdfFileManager pdfFileManager, IPdfViewerService pdfViewerService)
         {
+            System.Diagnostics.Debug.WriteLine("MainViewModel created");
             _pdfFileManager = pdfFileManager;
+            _pdfViewerService = pdfViewerService;
 
             LoadFilesCommand = new AsyncRelayCommand(LoadFilesAsync);
             MoveFilesCommand = new AsyncRelayCommand(MoveFilesAsync);
@@ -64,14 +66,19 @@ namespace LibraryManager.ViewModels
             ApplyProgramCommand = new RelayCommand(ApplyProgram, () => CanApplyProgram);
             _createProgramFoldersCommand = new RelayCommand(CreateProgramFolders, CanCreateProgramFolders);
             AssignMatchedFilesCommand = new RelayCommand(AssignMatchedFiles);
-            _nextPageCommand = new RelayCommand(() => PreviewPageIndex++, () => CanGoToNextPage);
-            _previousPageCommand = new RelayCommand(() => PreviewPageIndex--, () => CanGoToPreviousPage);
             _undoCommand = new RelayCommand(UndoLastAssignment, CanUndo);
             ArchiveCommand = new RelayCommand(ArchiveExecute);
+            LoadPreviewCommand = new RelayCommand<string>(LoadPreview);
+            _nextPageCommand = new RelayCommand(() => PreviewPageIndex++, () => PreviewPageIndex < _pdfViewerService.PageCount - 1);
+            _previousPageCommand = new RelayCommand(() => PreviewPageIndex--, () => PreviewPageIndex > 0);
+            System.Diagnostics.Debug.WriteLine("NextPageCommand bound: " + (_nextPageCommand != null));
+            System.Diagnostics.Debug.WriteLine("PreviousPageCommand bound: " + (_previousPageCommand != null));
         }
 
         private readonly AliasManager _aliasManager = new AliasManager();
         private readonly IPdfFileManager _pdfFileManager;
+        private readonly IPdfViewerService _pdfViewerService;
+
         private CancellationTokenSource _cancellationTokenSource;
         private int _progressValue;
         public int ProgressValue
@@ -80,6 +87,7 @@ namespace LibraryManager.ViewModels
             set { _progressValue = value; OnPropertyChanged(); }
         }
 
+        private string _programName;
         public string ProgramName
         {
             get => _programName;
@@ -96,8 +104,28 @@ namespace LibraryManager.ViewModels
                 }
             }
         }
-        private string _programName;
+
+        private PdfFile _selectedPdf;
+        public PdfFile SelectedPdf
+        {
+            get => _selectedPdf;
+            set
+            {
+                if (_selectedPdf == value) return;
+                _selectedPdf = value;
+                OnPropertyChanged();
+                System.Diagnostics.Debug.WriteLine($"SelectedPdf changed: {_selectedPdf?.FileName}");
+
+                if (_selectedPdf != null)
+                {
+                    LoadPreview(_selectedPdf.FullPath);
+                }
+            }
+        }
+
         private string _rootFolderPath;
+
+        private bool _isProgramSet;
         public bool IsProgramSet
         {
             get => _isProgramSet;
@@ -107,7 +135,6 @@ namespace LibraryManager.ViewModels
                 OnPropertyChanged();
             }
         }
-        private bool _isProgramSet;
 
         private bool _canApplyProgram;
         public bool CanApplyProgram
@@ -117,29 +144,6 @@ namespace LibraryManager.ViewModels
             {
                 _canApplyProgram = value;
                 OnPropertyChanged();
-            }
-        }
-
-        private PdfFile _selectedPdf;
-        public PdfFile SelectedPdf
-        {
-            get => _selectedPdf;
-            set
-            {
-                if (_selectedPdf != value)
-                {
-                    _selectedPdf = value;
-                    OnPropertyChanged();
-                    if (_selectedPdf != null)
-                    {
-                        LoadPdfPreview(_selectedPdf.FullPath);
-                    }
-                    else
-                    {
-                        PreviewImage = null;
-                    }
-
-                }
             }
         }
 
@@ -154,101 +158,61 @@ namespace LibraryManager.ViewModels
             }
         }
 
+        public bool CanGoToNextPage => PreviewPageIndex < _pdfViewerService.PageCount - 1;
+        public bool CanGoToPreviousPage => PreviewPageIndex > 0;
+
         private int _previewPageIndex;
         public int PreviewPageIndex
         {
             get => _previewPageIndex;
             set
             {
+                if (_previewPageIndex == value) return;
                 _previewPageIndex = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(PreviewPageDisplay));
-                OnPropertyChanged(nameof(CanGoToPreviousPage));
                 OnPropertyChanged(nameof(CanGoToNextPage));
+                OnPropertyChanged(nameof(CanGoToPreviousPage));
+
+                PreviewImage = _pdfViewerService.RenderPage(_previewPageIndex);
 
                 _nextPageCommand?.RaiseCanExecuteChanged();
                 _previousPageCommand?.RaiseCanExecuteChanged();
-
-                RenderPreviewPage();
             }
         }
 
-        private int _previewPageCount;
-        public int PreviewPageCount
+        public string PreviewPageDisplay => $"{PreviewPageIndex + 1} / {_pdfViewerService.PageCount}";
+
+
+        // --------------------------- Methods --------------------------------
+        private void LoadPreview(string filePath)
         {
-            get => _previewPageCount;
-            set
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             {
-                _previewPageCount = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(PreviewPageDisplay));
-                OnPropertyChanged(nameof(CanGoToPreviousPage));
-                OnPropertyChanged(nameof(CanGoToNextPage));
-            }
-        }
-
-        public string PreviewPageDisplay => $"{PreviewPageIndex + 1} / {PreviewPageCount}";
-        public bool CanGoToPreviousPage => PreviewPageIndex > 0;
-        public bool CanGoToNextPage => PreviewPageIndex < PreviewPageCount - 1;
-
-        private PdfDocument _currentPreviewDocument;
-
-        private void LoadPdfPreview(string filePath)
-        {
-            try
-            {
-                if (!File.Exists(filePath))
-                {
-                    LogHelper.AddLog(LogMessages, $"PDF file does not exist: {filePath}", LogLevel.Error);
-                    PreviewImage = null;
-                    PreviewPageCount = 0;
-                    return;
-                }
-                _currentPreviewDocument?.Dispose();
-                _currentPreviewDocument = PdfDocument.Load(filePath);
-                
-                PreviewPageCount = _currentPreviewDocument.PageCount;
-                PreviewPageIndex = 0;
-            }
-            catch (Exception ex)
-            {
-                LogHelper.AddLog(LogMessages, $"Failed to preview PDF: {ex.Message}", LogLevel.Error);
-                PreviewImage = null;
-                PreviewPageCount = 0;
-            }
-        }
-
-        private void RenderPreviewPage()
-        {
-            if (_currentPreviewDocument == null ||
-                PreviewPageIndex < 0 || PreviewPageIndex >= PreviewPageCount)
-            {
-                LogHelper.AddLog(LogMessages, $"Render skipped", LogLevel.Error);
+                LogHelper.AddLog(LogMessages, $"Invalid file path: {filePath}", LogLevel.Error);
                 return;
             }
 
-            try
+            if (_pdfViewerService.Load(filePath))
             {
-                using var image = _currentPreviewDocument.Render(PreviewPageIndex, 300, 300, true);
-                if (image == null)
-                {
-                    LogHelper.AddLog(LogMessages, $"Image is null", LogLevel.Error);
-                    return;
-                }
-                var bitmap = (Bitmap)image;
+                PreviewPageIndex = 0;
+                PreviewImage = _pdfViewerService.RenderPage(0);
 
-                if (bitmap.Width == 0 || bitmap.Height == 0)
-                {
-                    LogHelper.AddLog(LogMessages, $"Image has zero dimentions", LogLevel.Error);
-                    return;
-                }
-                PreviewImage = PdfPreviewHelper.ConvertBitmapToBitmapImage(bitmap);
+                OnPropertyChanged(nameof(PreviewPageDisplay));
+                OnPropertyChanged(nameof(CanGoToNextPage));
+                OnPropertyChanged(nameof(CanGoToPreviousPage));
+
+                _nextPageCommand?.RaiseCanExecuteChanged();
+                _previousPageCommand?.RaiseCanExecuteChanged();
             }
-            catch (Exception ex)
+            else
             {
-                LogHelper.AddLog(LogMessages, $"Failed to render page {PreviewPageIndex + 1}: {ex.Message}");
+                PreviewImage = null;
+                OnPropertyChanged(nameof(PreviewPageDisplay));
+                LogHelper.AddLog(LogMessages, $"Failed to load {filePath}", LogLevel.Error);
             }
         }
+
 
         private async Task LoadFilesAsync()
         {
@@ -363,8 +327,7 @@ namespace LibraryManager.ViewModels
             _cancellationTokenSource = new CancellationTokenSource();
             var progress = new Progress<int>(val => ProgressValue = val);
 
-            _currentPreviewDocument?.Dispose();
-            _currentPreviewDocument = null;
+            _pdfViewerService?.Dispose();
 
             try
             {
