@@ -10,9 +10,7 @@
         xmlns:local="clr-namespace:LibraryManager" 
         mc:Ignorable="d"
         Icon="Resources/Appicon.ico"
-        Title="Library Manager" Height="600" Width="1000"
-        d:DataContext="{d:DesignInstance Type=vm:MainViewModel, 
-                        IsDesignTimeCreatable=True}">
+        Title="Library Manager" Height="600" Width="1000">
     
     <Window.Resources>
         <CollectionViewSource x:Key="ReversedLogs" Source="{Binding LogMessages}">
@@ -156,7 +154,8 @@
                 </ListBox>
             </TabItem>
 
-            <TabItem Header="Preview">
+            <TabItem Header="Preview"
+                     DataContext="{Binding Preview}">
                 <!-- Preview/Details Panel -->
                 <Border Background="#f4f4f4" 
                         Padding="10" 

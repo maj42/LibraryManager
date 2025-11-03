@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Forms;
 using System;
-using System.Windows.Media.Imaging;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
@@ -19,6 +18,8 @@ namespace LibraryManager.ViewModels
 {
     public class MainViewModel : BaseViewModel
     {
+        public PreviewViewModel Preview { get; }
+
         public ObservableCollection<PdfFile> PdfFiles { get; set; } = new();
         public ObservableCollection<LogEntry> LogMessages { get; set; } = new();
         public ObservableCollection<InstrumentStatus> Instruments { get; set; } = new();
@@ -34,14 +35,9 @@ namespace LibraryManager.ViewModels
         public ICommand UndoCommand => _undoCommand;
         public ICommand ArchiveCommand { get; }
         public ICommand CreateProgramFoldersCommand => _createProgramFoldersCommand;
-        public ICommand NextPageCommand => _nextPageCommand;
-        public ICommand PreviousPageCommand => _previousPageCommand;
-        public ICommand LoadPreviewCommand { get; }
-
+        
         private readonly RelayCommand _undoCommand;
         private RelayCommand _setProgramCommand;
-        private RelayCommand _nextPageCommand;
-        private RelayCommand _previousPageCommand;
         private RelayCommand _createProgramFoldersCommand;
 
         public ICommand SetProgramFolderCommand => new RelayCommand(() =>
@@ -56,9 +52,9 @@ namespace LibraryManager.ViewModels
         public MainViewModel(IPdfFileManager pdfFileManager, IPdfViewerService pdfViewerService)
         {
             System.Diagnostics.Debug.WriteLine("MainViewModel created");
-            _pdfFileManager = pdfFileManager;
-            _pdfViewerService = pdfViewerService;
+            Preview = new PreviewViewModel(pdfViewerService);
 
+            _pdfFileManager = pdfFileManager;
             LoadFilesCommand = new AsyncRelayCommand(LoadFilesAsync);
             MoveFilesCommand = new AsyncRelayCommand(MoveFilesAsync);
             _setProgramCommand = new RelayCommand(SetProgramFolders, CanSetProgram);
@@ -68,16 +64,11 @@ namespace LibraryManager.ViewModels
             AssignMatchedFilesCommand = new RelayCommand(AssignMatchedFiles);
             _undoCommand = new RelayCommand(UndoLastAssignment, CanUndo);
             ArchiveCommand = new RelayCommand(ArchiveExecute);
-            LoadPreviewCommand = new RelayCommand<string>(LoadPreview);
-            _nextPageCommand = new RelayCommand(() => PreviewPageIndex++, () => PreviewPageIndex < _pdfViewerService.PageCount - 1);
-            _previousPageCommand = new RelayCommand(() => PreviewPageIndex--, () => PreviewPageIndex > 0);
-            System.Diagnostics.Debug.WriteLine("NextPageCommand bound: " + (_nextPageCommand != null));
-            System.Diagnostics.Debug.WriteLine("PreviousPageCommand bound: " + (_previousPageCommand != null));
         }
 
         private readonly AliasManager _aliasManager = new AliasManager();
         private readonly IPdfFileManager _pdfFileManager;
-        private readonly IPdfViewerService _pdfViewerService;
+        
 
         private CancellationTokenSource _cancellationTokenSource;
         private int _progressValue;
@@ -118,7 +109,7 @@ namespace LibraryManager.ViewModels
 
                 if (_selectedPdf != null)
                 {
-                    LoadPreview(_selectedPdf.FullPath);
+                    Preview.LoadPreview(_selectedPdf.FullPath);
                 }
             }
         }
@@ -147,72 +138,8 @@ namespace LibraryManager.ViewModels
             }
         }
 
-        private BitmapImage _previewImage;
-        public BitmapImage PreviewImage
-        {
-            get => _previewImage;
-            set
-            {
-                _previewImage = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public bool CanGoToNextPage => PreviewPageIndex < _pdfViewerService.PageCount - 1;
-        public bool CanGoToPreviousPage => PreviewPageIndex > 0;
-
-        private int _previewPageIndex;
-        public int PreviewPageIndex
-        {
-            get => _previewPageIndex;
-            set
-            {
-                if (_previewPageIndex == value) return;
-                _previewPageIndex = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(PreviewPageDisplay));
-                OnPropertyChanged(nameof(CanGoToNextPage));
-                OnPropertyChanged(nameof(CanGoToPreviousPage));
-
-                PreviewImage = _pdfViewerService.RenderPage(_previewPageIndex);
-
-                _nextPageCommand?.RaiseCanExecuteChanged();
-                _previousPageCommand?.RaiseCanExecuteChanged();
-            }
-        }
-
-        public string PreviewPageDisplay => $"{PreviewPageIndex + 1} / {_pdfViewerService.PageCount}";
-
 
         // --------------------------- Methods --------------------------------
-        private void LoadPreview(string filePath)
-        {
-            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
-            {
-                LogHelper.AddLog(LogMessages, $"Invalid file path: {filePath}", LogLevel.Error);
-                return;
-            }
-
-            if (_pdfViewerService.Load(filePath))
-            {
-                PreviewPageIndex = 0;
-                PreviewImage = _pdfViewerService.RenderPage(0);
-
-                OnPropertyChanged(nameof(PreviewPageDisplay));
-                OnPropertyChanged(nameof(CanGoToNextPage));
-                OnPropertyChanged(nameof(CanGoToPreviousPage));
-
-                _nextPageCommand?.RaiseCanExecuteChanged();
-                _previousPageCommand?.RaiseCanExecuteChanged();
-            }
-            else
-            {
-                PreviewImage = null;
-                OnPropertyChanged(nameof(PreviewPageDisplay));
-                LogHelper.AddLog(LogMessages, $"Failed to load {filePath}", LogLevel.Error);
-            }
-        }
-
 
         private async Task LoadFilesAsync()
         {
@@ -327,7 +254,7 @@ namespace LibraryManager.ViewModels
             _cancellationTokenSource = new CancellationTokenSource();
             var progress = new Progress<int>(val => ProgressValue = val);
 
-            _pdfViewerService?.Dispose();
+            //_pdfViewerService?.Dispose();
 
             try
             {

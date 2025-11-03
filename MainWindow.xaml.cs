@@ -6,6 +6,8 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using LibraryManager.Models;
+using LibraryManager.Services.FileManagement;
+using LibraryManager.Services.PdfPreview;
 using LibraryManager.ViewModels;
 
 namespace LibraryManager
@@ -20,8 +22,13 @@ namespace LibraryManager
         public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
+
+            DataContext = new MainViewModel(
+                new LocalPdfFileManager(),
+                new PdfViewerService()
+            );
+
             _viewModel = viewModel;
-            DataContext = _viewModel;
         }
 
         private void PdfFilesListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
