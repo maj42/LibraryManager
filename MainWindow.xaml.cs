@@ -75,6 +75,23 @@ namespace LibraryManager
             }
         }
 
+        private void Preview_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if ((DataContext as MainViewModel)?.Preview is PreviewViewModel viewModel)
+            {
+                if (e.Delta > 0)
+                {
+                    if (viewModel.PreviousPageCommand.CanExecute(null))
+                        viewModel.PreviousPageCommand.Execute(null);
+                }
+                else if (e.Delta < 0)
+                {
+                    if (viewModel.NextPageCommand.CanExecute(null))
+                        viewModel.NextPageCommand.Execute(null);
+                }
+            }
+        }
+
         private void Instrument_DragOver(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(typeof(PdfFile)))

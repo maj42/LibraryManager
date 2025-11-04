@@ -1,7 +1,7 @@
-﻿using LibraryManager.Helpers;
-using PdfiumViewer;
+﻿using PdfiumViewer;
 using System;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Media.Imaging;
 
@@ -45,7 +45,7 @@ namespace LibraryManager.Services.PdfPreview
                 System.Diagnostics.Debug.WriteLine($"Rendering page");
                 using var image = _document.Render(pageIndex, 300, 300, true);
                 var copy = new Bitmap(image);
-                var bitmapImage = PdfPreviewHelper.ConvertBitmapToBitmapImage(copy);
+                var bitmapImage = ConvertBitmapToBitmapImage(copy);
                 copy.Dispose();
 
                 return bitmapImage;
@@ -54,6 +54,23 @@ namespace LibraryManager.Services.PdfPreview
             {
                 System.Diagnostics.Debug.WriteLine($"RenderPage error: {ex}");
                 return null;
+            }
+        }
+
+        private static BitmapImage ConvertBitmapToBitmapImage(Bitmap bitmap)
+        {
+            using (MemoryStream memory = new MemoryStream())
+            {
+                bitmap.Save(memory, ImageFormat.Png);
+                memory.Position = 0;
+
+                BitmapImage bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapImage.StreamSource = memory;
+                bitmapImage.EndInit();
+                bitmapImage.Freeze();
+                return bitmapImage;
             }
         }
 

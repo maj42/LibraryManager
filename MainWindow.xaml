@@ -155,7 +155,8 @@
             </TabItem>
 
             <TabItem Header="Preview"
-                     DataContext="{Binding Preview}">
+                     DataContext="{Binding Preview}"
+                     MouseWheel="Preview_MouseWheel">
                 <!-- Preview/Details Panel -->
                 <Border Background="#f4f4f4" 
                         Padding="10" 

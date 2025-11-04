@@ -1,4 +1,5 @@
 ﻿using LibraryManager.Helpers;
+using LibraryManager.Services.Logging;
 using LibraryManager.Services.PdfPreview;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -8,6 +9,7 @@ namespace LibraryManager.ViewModels
     public class PreviewViewModel : BaseViewModel
     {
         private readonly IPdfViewerService _pdfViewerService;
+        private readonly ILogger _logger;
 
         private RelayCommand _nextPageCommand;
         private RelayCommand _previousPageCommand;
@@ -51,9 +53,10 @@ namespace LibraryManager.ViewModels
         public ICommand PreviousPageCommand => _previousPageCommand;
         public ICommand LoadPreviewCommand { get; }
 
-        public PreviewViewModel(IPdfViewerService pdfViewerService)
+        public PreviewViewModel(IPdfViewerService pdfViewerService, ILogger logger)
         {
             _pdfViewerService = pdfViewerService;
+            _logger = logger;
 
             _nextPageCommand = new RelayCommand(() => PreviewPageIndex++, () => CanGoToNextPage);
             _previousPageCommand = new RelayCommand(() => PreviewPageIndex--, () => CanGoToPreviousPage);

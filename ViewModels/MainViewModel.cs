@@ -2,6 +2,7 @@ using LibraryManager.Helpers;
 using LibraryManager.Models;
 using LibraryManager.Services.FileManagement;
 using LibraryManager.Services.PdfPreview;
+using LibraryManager.Services.Logging;
 using LibraryManager.Services;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -22,6 +23,7 @@ namespace LibraryManager.ViewModels
 
         public ObservableCollection<PdfFile> PdfFiles { get; set; } = new();
         public ObservableCollection<LogEntry> LogMessages { get; set; } = new();
+        public ILogger _logger { get; }
         public ObservableCollection<InstrumentStatus> Instruments { get; set; } = new();
         
         public readonly Stack<AssignmentOperation> _undoStack = new();
@@ -46,15 +48,17 @@ namespace LibraryManager.ViewModels
             {
                 UpdateInstrumentPath(instrument, _rootFolderPath, ProgramName);
             }
-            LogHelper.AddLog(LogMessages, "Set program folders for selected instruments", LogLevel.Success);
+            _logger.Log("Set program folders for selected instruments", LogLevel.Success);
         });
 
         public MainViewModel(IPdfFileManager pdfFileManager, IPdfViewerService pdfViewerService)
         {
             System.Diagnostics.Debug.WriteLine("MainViewModel created");
-            Preview = new PreviewViewModel(pdfViewerService);
+            Preview = new PreviewViewModel(pdfViewerService, _logger);
+
 
             _pdfFileManager = pdfFileManager;
+            _logger = new UiLogger(LogMessages);
             LoadFilesCommand = new AsyncRelayCommand(LoadFilesAsync);
             MoveFilesCommand = new AsyncRelayCommand(MoveFilesAsync);
             _setProgramCommand = new RelayCommand(SetProgramFolders, CanSetProgram);
@@ -167,13 +171,13 @@ namespace LibraryManager.ViewModels
                 instrumentDirs = Directory.GetDirectories(_rootFolderPath);
                 if (instrumentDirs.Length == 0)
                 {
-                    LogHelper.AddLog(LogMessages, "Selected folder contains no instrument folders.", LogLevel.Error);
+                    _logger.Log("Selected folder contains no instrument folders.", LogLevel.Error);
                     return;
                 }
             }
             catch (Exception ex)
             {
-                LogHelper.AddLog(LogMessages, $"Failed to get instrument folders: {ex.Message}", LogLevel.Error);
+                _logger.Log($"Failed to get instrument folders: {ex.Message}", LogLevel.Error);
                 return;
             }
            
@@ -239,12 +243,12 @@ namespace LibraryManager.ViewModels
                     PdfFiles.Add(file);
                 }
 
-                LogHelper.AddLog(LogMessages, $"Loaded {files.Count} PDF files and {Instruments.Count} instruments from {_rootFolderPath}",
+                _logger.Log($"Loaded {files.Count} PDF files and {Instruments.Count} instruments from {_rootFolderPath}",
                     LogLevel.Success);
             }
             catch (OperationCanceledException)
             {
-                LogHelper.AddLog(LogMessages, "Loading Cancelled.", LogLevel.Error);
+                _logger.Log("Loading Cancelled.", LogLevel.Error);
             }
         }
 
@@ -253,8 +257,6 @@ namespace LibraryManager.ViewModels
             ProgressValue = 0;
             _cancellationTokenSource = new CancellationTokenSource();
             var progress = new Progress<int>(val => ProgressValue = val);
-
-            //_pdfViewerService?.Dispose();
 
             try
             {
@@ -266,7 +268,7 @@ namespace LibraryManager.ViewModels
 
                 if (assignedPdfCount == 0)
                 {
-                    LogHelper.AddLog(LogMessages, "No files assigned to instruments.", LogLevel.Error);
+                    _logger.Log("No files assigned to instruments.", LogLevel.Error);
                     return;
                 }
 
@@ -280,7 +282,7 @@ namespace LibraryManager.ViewModels
 
                         if (!instrument.ProgramFolderExists || string.IsNullOrWhiteSpace(targetFolder))
                         {
-                            LogHelper.AddLog(LogMessages, $"Skipping '{instrument.Name}: Program folder path is not set or doesn't exist.'", LogLevel.Error);
+                            _logger.Log($"Skipping '{instrument.Name}: Program folder path is not set or doesn't exist.'", LogLevel.Error);
                             continue;
                         }
 
@@ -298,14 +300,14 @@ namespace LibraryManager.ViewModels
                                     if (File.Exists(targetPath))
                                     {
                                         File.Delete(targetPath);
-                                        LogHelper.AddLog(LogMessages, $"Overwriting existing file at '{targetPath}'", LogLevel.Info);
+                                        _logger.Log($"Overwriting existing file at '{targetPath}'", LogLevel.Info);
                                     }
 
                                     File.Move(file.FullPath, targetPath);
                                     movedFilesMap[file.FullPath] = targetPath;
                                     movedFiles++;
 
-                                    LogHelper.AddLog(LogMessages, $"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Info);
+                                    _logger.Log($"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Info);
                                 }
                                 else
                                 {
@@ -313,24 +315,24 @@ namespace LibraryManager.ViewModels
 
                                     if (!File.Exists(sourcePath))
                                     {
-                                        LogHelper.AddLog(LogMessages, $"Missing source for copy: {sourcePath}", LogLevel.Error);
+                                        _logger.Log($"Missing source for copy: {sourcePath}", LogLevel.Error);
                                         continue;
                                     }
 
                                     if (File.Exists(targetPath))
                                     {
                                         File.Delete(targetPath);
-                                        LogHelper.AddLog(LogMessages, $"Overwriting existing file at '{targetPath}'", LogLevel.Info);
+                                        _logger.Log($"Overwriting existing file at '{targetPath}'", LogLevel.Info);
                                     }
 
                                     File.Copy(sourcePath, targetPath, overwrite: true);
 
-                                    LogHelper.AddLog(LogMessages, $"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Success);
+                                    _logger.Log($"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Success);
                                 }
                             }
                             catch (Exception ex)
                             {
-                                LogHelper.AddLog(LogMessages, $"Error moving '{file.FileName}' to '{instrument.Name}': {ex.Message}", LogLevel.Error);
+                                _logger.Log($"Error moving '{file.FileName}' to '{instrument.Name}': {ex.Message}", LogLevel.Error);
                             }
                         }
                     }
@@ -338,12 +340,12 @@ namespace LibraryManager.ViewModels
                 
                 if (movedFiles == 0)
                 {
-                    LogHelper.AddLog(LogMessages, "No files were moved", LogLevel.Error);
+                    _logger.Log("No files were moved", LogLevel.Error);
                 }
             }
             catch(OperationCanceledException)
             {
-                LogHelper.AddLog(LogMessages, "Moving Cancelled", LogLevel.Error);
+                _logger.Log("Moving Cancelled", LogLevel.Error);
             }
         }
 
@@ -354,7 +356,7 @@ namespace LibraryManager.ViewModels
                 UpdateInstrumentPath(instrument, _rootFolderPath, ProgramName);
             }
 
-            LogHelper.AddLog(LogMessages, "Checked program folders for selected instruments");
+            _logger.Log("Checked program folders for selected instruments");
             RefreshCommands();
         }
 
@@ -371,7 +373,7 @@ namespace LibraryManager.ViewModels
             if (Directory.Exists(path))
             {
                 instrument.ProgramFolderExists = true;
-                LogHelper.AddLog(LogMessages, $"Program folder for '{instrument.Name}' found: {path}");
+                _logger.Log($"Program folder for '{instrument.Name}' found: {path}");
             }
             else
             {
@@ -408,11 +410,11 @@ namespace LibraryManager.ViewModels
                 {
                     Directory.CreateDirectory(programPath);
                     instrument.ProgramFolderExists = true;
-                    LogHelper.AddLog(LogMessages, $"Created folder: {programPath}");
+                    _logger.Log($"Created folder: {programPath}");
                 }
                 catch(Exception ex )
                 {
-                    LogHelper.AddLog(LogMessages, $"Error creating folder '{programPath}': {ex.Message}", LogLevel.Error);
+                    _logger.Log($"Error creating folder '{programPath}': {ex.Message}", LogLevel.Error);
                 }
             }
 
@@ -447,7 +449,7 @@ namespace LibraryManager.ViewModels
 
             _undoCommand.RaiseCanExecuteChanged();
 
-            LogHelper.AddLog(LogMessages, $"{(copyInstead ? "Copied" : "Assigned")} '{file.FileName}' to '{instrument.Name}'", LogLevel.Success);
+            _logger.Log($"{(copyInstead ? "Copied" : "Assigned")} '{file.FileName}' to '{instrument.Name}'", LogLevel.Success);
         }
 
         private void UndoLastAssignment()
@@ -468,7 +470,7 @@ namespace LibraryManager.ViewModels
 
             _undoCommand.RaiseCanExecuteChanged();
 
-            LogHelper.AddLog(LogMessages, $"Undid assignment of '{op.File.FileName}' from '{op.Instrument.Name}'", LogLevel.Success);
+            _logger.Log($"Undid assignment of '{op.File.FileName}' from '{op.Instrument.Name}'", LogLevel.Success);
         }
 
         private bool CanUndo()
@@ -497,7 +499,7 @@ namespace LibraryManager.ViewModels
 
             _undoCommand.RaiseCanExecuteChanged();
 
-            LogHelper.AddLog(LogMessages, $"Unassigned '{file.FileName}' from '{instrument.Name}'", LogLevel.Success);
+            _logger.Log($"Unassigned '{file.FileName}' from '{instrument.Name}'", LogLevel.Success);
         }
 
         public void UnassignFile(PdfFile file)
@@ -520,14 +522,14 @@ namespace LibraryManager.ViewModels
                     AssignPdfToInstrument(file, matchedInstrument);
                 }
             }
-            LogHelper.AddLog(LogMessages, "All matched files assigned.", LogLevel.Success);
+            _logger.Log("All matched files assigned.", LogLevel.Success);
         }
 
         private void ArchiveExecute()
         {
             if (string.IsNullOrWhiteSpace(ProgramName))
             {
-                LogHelper.AddLog(LogMessages, "No program is currently set. Archive aborted.", LogLevel.Error);
+                _logger.Log("No program is currently set. Archive aborted.", LogLevel.Error);
                 return;
             }
 
@@ -535,7 +537,7 @@ namespace LibraryManager.ViewModels
             {
                 if (string.IsNullOrWhiteSpace(instrument.ProgramFolderPath))
                 {
-                    LogHelper.AddLog(LogMessages, $"No program folder set for '{instrument.Name}. Skipping.'", LogLevel.Info);
+                    _logger.Log($"No program folder set for '{instrument.Name}. Skipping.'", LogLevel.Info);
                     continue;
                 }
 
@@ -544,13 +546,13 @@ namespace LibraryManager.ViewModels
 
                 if (!Directory.Exists(sourcePath))
                 {
-                    LogHelper.AddLog(LogMessages, $"Source folder does not exist for '{instrument.Name}'. Skipping.", LogLevel.Info);
+                    _logger.Log($"Source folder does not exist for '{instrument.Name}'. Skipping.", LogLevel.Info);
                     continue;
                 }
 
                 if (!Directory.Exists(archivePath))
                 {
-                    LogHelper.AddLog(LogMessages, $"Archive folder not found for '{instrument.Name}': {archivePath}", LogLevel.Error);
+                    _logger.Log($"Archive folder not found for '{instrument.Name}': {archivePath}", LogLevel.Error);
                     return;
                 }
 
@@ -565,7 +567,7 @@ namespace LibraryManager.ViewModels
                         if (File.Exists(destinationFile))
                         {
                             File.Delete(destinationFile);
-                            LogHelper.AddLog(LogMessages, $"Overwriting file in archive for '{instrument.Name}': {fileName}", LogLevel.Info);
+                            _logger.Log($"Overwriting file in archive for '{instrument.Name}': {fileName}", LogLevel.Info);
                         }
 
                         File.Move(file, destinationFile);
@@ -577,11 +579,11 @@ namespace LibraryManager.ViewModels
                     }
                     instrument.AssignedFiles.Clear();
 
-                    LogHelper.AddLog(LogMessages, $"Archived files for '{instrument.Name}' to: {archivePath}", LogLevel.Success);
+                    _logger.Log($"Archived files for '{instrument.Name}' to: {archivePath}", LogLevel.Success);
                 }
                 catch (Exception ex)
                 {
-                    LogHelper.AddLog(LogMessages, $"Error archiving files for '{instrument.Name}': {ex.Message}", LogLevel.Error);
+                    _logger.Log($"Error archiving files for '{instrument.Name}': {ex.Message}", LogLevel.Error);
                 }
             }
 
