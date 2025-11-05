@@ -55,8 +55,6 @@ namespace LibraryManager.ViewModels
         {
             System.Diagnostics.Debug.WriteLine("MainViewModel created");
             Preview = new PreviewViewModel(pdfViewerService, _logger);
-
-
             _pdfFileManager = pdfFileManager;
             _logger = new UiLogger(LogMessages);
             LoadFilesCommand = new AsyncRelayCommand(LoadFilesAsync);

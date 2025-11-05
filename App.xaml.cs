@@ -18,6 +18,7 @@ namespace LibraryManager
 
             var services = new ServiceCollection();
             ConfigureServices(services);
+
             ServiceProvider = services.BuildServiceProvider();
 
             var mainWindow = new MainWindow(ServiceProvider.GetRequiredService<MainViewModel>());
@@ -27,10 +28,15 @@ namespace LibraryManager
 
         private void ConfigureServices(IServiceCollection services)
         {
+            // Services
             services.AddSingleton<IFileStorageService, LocalFileStorageService>();
             services.AddSingleton<IPdfFileManager, LocalPdfFileManager>();
             services.AddSingleton<IPdfViewerService, PdfViewerService>();
+            // ViewModels
             services.AddSingleton<MainViewModel>();
+            services.AddTransient<PreviewViewModel>();
+            // Windows
+            services.AddTransient<MainWindow>();
         }
     }
 }
