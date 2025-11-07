@@ -1,4 +1,5 @@
-﻿using LibraryManager.Services.FileManagement;
+﻿using LibraryManager.Services.Dialogs;
+using LibraryManager.Services.FileManagement;
 using LibraryManager.Services.FileStorage;
 using LibraryManager.Services.PdfPreview;
 using LibraryManager.ViewModels;
@@ -32,6 +33,7 @@ namespace LibraryManager
             services.AddSingleton<IFileStorageService, LocalFileStorageService>();
             services.AddSingleton<IPdfFileManager, LocalPdfFileManager>();
             services.AddSingleton<IPdfViewerService, PdfViewerService>();
+            services.AddSingleton<IDialogService, DialogService>();
             // ViewModels
             services.AddSingleton<MainViewModel>();
             services.AddTransient<PreviewViewModel>();

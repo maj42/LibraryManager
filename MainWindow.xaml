@@ -163,24 +163,34 @@
                         CornerRadius="4">
                     <Grid>
                         <Image Source="{Binding PreviewImage}"
-                               Stretch="Uniform" Margin="10"
-                               Height="400" Width="300"/>
+                               Stretch="Uniform" 
+                               Margin="10"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               SnapsToDevicePixels="True"/>
                         <StackPanel Orientation="Horizontal"
                                     VerticalAlignment="Bottom"
                                     HorizontalAlignment="Center"
                                     Margin="10">
                             <Button Content="←"
-                                Command="{Binding PreviousPageCommand}"
-                                IsEnabled="{Binding CanGoToPreviousPage}" 
-                                Width="30" Margin="5"/>
-                                
+                                    Command="{Binding PreviousPageCommand}"
+                                    IsEnabled="{Binding CanGoToPreviousPage}" 
+                                    Width="30" 
+                                    Margin="5"
+                                    Opacity="0.5"/>
+
                             <TextBlock Text="{Binding PreviewPageDisplay}"
-                                VerticalAlignment="Center"
-                                FontWeight="Bold" Margin="10,0"/>
+                                       VerticalAlignment="Center"
+                                       FontWeight="Bold" 
+                                       Margin="10,0"
+                                       Opacity="0.5"/>
                             <Button Content="→"
-                                Command="{Binding NextPageCommand}"
-                                IsEnabled="{Binding CanGoToNextPage}"
-                                Width="30" Margin="5"/>
+                                    Command="{Binding NextPageCommand}"
+                                    IsEnabled="{Binding CanGoToNextPage}"
+                                    Width="30" 
+                                    Margin="5"
+                                    Opacity="0.5"/>
                         </StackPanel>
                     </Grid>
                 </Border>

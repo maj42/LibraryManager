@@ -13,6 +13,7 @@ using System;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
+using LibraryManager.Services.Dialogs;
 
 
 namespace LibraryManager.ViewModels
@@ -38,6 +39,9 @@ namespace LibraryManager.ViewModels
         public ICommand ArchiveCommand { get; }
         public ICommand CreateProgramFoldersCommand => _createProgramFoldersCommand;
         
+        private readonly AliasManager _aliasManager = new AliasManager();
+        private readonly IPdfFileManager _pdfFileManager;
+        private readonly IDialogService _dialogService;
         private readonly RelayCommand _undoCommand;
         private RelayCommand _setProgramCommand;
         private RelayCommand _createProgramFoldersCommand;
@@ -51,11 +55,14 @@ namespace LibraryManager.ViewModels
             _logger.Log("Set program folders for selected instruments", LogLevel.Success);
         });
 
-        public MainViewModel(IPdfFileManager pdfFileManager, IPdfViewerService pdfViewerService)
+        public MainViewModel(IPdfFileManager pdfFileManager, 
+                             IPdfViewerService pdfViewerService,
+                             IDialogService dialogService)
         {
             System.Diagnostics.Debug.WriteLine("MainViewModel created");
             Preview = new PreviewViewModel(pdfViewerService, _logger);
             _pdfFileManager = pdfFileManager;
+            _dialogService = dialogService;
             _logger = new UiLogger(LogMessages);
             LoadFilesCommand = new AsyncRelayCommand(LoadFilesAsync);
             MoveFilesCommand = new AsyncRelayCommand(MoveFilesAsync);
@@ -65,12 +72,8 @@ namespace LibraryManager.ViewModels
             _createProgramFoldersCommand = new RelayCommand(CreateProgramFolders, CanCreateProgramFolders);
             AssignMatchedFilesCommand = new RelayCommand(AssignMatchedFiles);
             _undoCommand = new RelayCommand(UndoLastAssignment, CanUndo);
-            ArchiveCommand = new RelayCommand(ArchiveExecute);
+            ArchiveCommand = new RelayCommand(ConfirmAndArchive);
         }
-
-        private readonly AliasManager _aliasManager = new AliasManager();
-        private readonly IPdfFileManager _pdfFileManager;
-        
 
         private CancellationTokenSource _cancellationTokenSource;
         private int _progressValue;
@@ -147,7 +150,7 @@ namespace LibraryManager.ViewModels
         {
             using var dialog = new FolderBrowserDialog
             {
-                Description = "Select the root folder containig instrument folder and PDF's"
+                Description = "Select the root folder containig instrument folders and PDFs"
             };
 
             if (dialog?.ShowDialog() != DialogResult.OK) return;
@@ -521,6 +524,22 @@ namespace LibraryManager.ViewModels
                 }
             }
             _logger.Log("All matched files assigned.", LogLevel.Success);
+        }
+
+        private void ConfirmAndArchive()
+        {
+            bool confirmed = _dialogService.Confirm(
+                "Are you sure you want to archive all program folders?\nThis will move files permanently to their Archive folders.",
+                "Confirm Archive"
+            );
+
+            if (!confirmed)
+            {
+                _logger.Log("Archive cancelled by user.", LogLevel.Info);
+                return;
+            }
+
+            ArchiveExecute();
         }
 
         private void ArchiveExecute()
