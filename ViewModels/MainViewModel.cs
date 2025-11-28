@@ -1,19 +1,20 @@
 using LibraryManager.Helpers;
 using LibraryManager.Models;
-using LibraryManager.Services.FileManagement;
-using LibraryManager.Services.PdfPreview;
-using LibraryManager.Services.Logging;
 using LibraryManager.Services;
+using LibraryManager.Services.Dialogs;
+using LibraryManager.Services.FileManagement;
+using LibraryManager.Services.Logging;
+using LibraryManager.Services.PdfPreview;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using System.Windows.Forms;
-using System;
-using System.Threading;
 using System.Linq;
-using System.Collections.Generic;
-using LibraryManager.Services.Dialogs;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using WinForms = System.Windows.Forms;
+using System.Windows.Input;
 
 
 namespace LibraryManager.ViewModels
@@ -26,6 +27,9 @@ namespace LibraryManager.ViewModels
         public ObservableCollection<LogEntry> LogMessages { get; set; } = new();
         public ILogger _logger { get; }
         public ObservableCollection<InstrumentStatus> Instruments { get; set; } = new();
+        public ObservableCollection<string> ProgramNameSuggestions { get; } = new();
+
+        private List<string> _allProgramNames = new();
         
         public readonly Stack<AssignmentOperation> _undoStack = new();
 
@@ -38,6 +42,9 @@ namespace LibraryManager.ViewModels
         public ICommand UndoCommand => _undoCommand;
         public ICommand ArchiveCommand { get; }
         public ICommand CreateProgramFoldersCommand => _createProgramFoldersCommand;
+        public ICommand FoldAllCommand { get; }
+        public ICommand UnfoldAllCommand { get; }
+        public ICommand MoveToRootCommand { get; }
         
         private readonly AliasManager _aliasManager = new AliasManager();
         private readonly IPdfFileManager _pdfFileManager;
@@ -45,6 +52,8 @@ namespace LibraryManager.ViewModels
         private readonly RelayCommand _undoCommand;
         private RelayCommand _setProgramCommand;
         private RelayCommand _createProgramFoldersCommand;
+
+        public event Action<string> InlineSuggestionChanged;
 
         public ICommand SetProgramFolderCommand => new RelayCommand(() =>
         {
@@ -72,7 +81,17 @@ namespace LibraryManager.ViewModels
             _createProgramFoldersCommand = new RelayCommand(CreateProgramFolders, CanCreateProgramFolders);
             AssignMatchedFilesCommand = new RelayCommand(AssignMatchedFiles);
             _undoCommand = new RelayCommand(UndoLastAssignment, CanUndo);
-            ArchiveCommand = new RelayCommand(ConfirmAndArchive);
+            ArchiveCommand = new AsyncRelayCommand(ConfirmAndArchive);
+            FoldAllCommand = new RelayCommand(() => 
+            {
+                foreach (var instrument in Instruments)
+                    instrument.IsExpanded = false;
+            });
+            UnfoldAllCommand = new RelayCommand(() => 
+            { 
+                foreach (var instrument in Instruments) instrument.IsExpanded = true; 
+            });
+            MoveToRootCommand = new AsyncRelayCommand(MoveToRootExecute);
         }
 
         private CancellationTokenSource _cancellationTokenSource;
@@ -94,6 +113,9 @@ namespace LibraryManager.ViewModels
                     _programName = value;
                     OnPropertyChanged();
 
+                    FilterProgramSuggestions(value);
+                    UpdateCurrentSuggestion();
+                    
                     CanApplyProgram = !string.IsNullOrEmpty(_programName);
                     RefreshProgramPaths();
                     RefreshCommands();
@@ -143,25 +165,57 @@ namespace LibraryManager.ViewModels
             }
         }
 
+        private string _currentSuggestion = string.Empty;
+        public string CurrentSuggestionDisplay
+        {
+            get => _currentSuggestion;
+            private set
+            {
+                if (_currentSuggestion == value) return;
+                _currentSuggestion = value;
+                OnPropertyChanged();
+
+                InlineSuggestionChanged?.Invoke(_currentSuggestion);
+            }
+        }
+
+        private Thickness _suggestionMargin = new Thickness(0, 0, 0, 0);
+        public Thickness SuggestionMargin
+        {
+            get => _suggestionMargin;
+            set
+            {
+                if (_suggestionMargin == value) return;
+                _suggestionMargin = value;
+                OnPropertyChanged();
+            }
+        }
+
 
         // --------------------------- Methods --------------------------------
 
         private async Task LoadFilesAsync()
         {
-            using var dialog = new FolderBrowserDialog
+            using var dialog = new WinForms.FolderBrowserDialog
             {
                 Description = "Select the root folder containig instrument folders and PDFs"
             };
 
-            if (dialog?.ShowDialog() != DialogResult.OK) return;
+            if (dialog?.ShowDialog() != WinForms.DialogResult.OK) return;
 
-            _rootFolderPath = dialog.SelectedPath;
+            await LoadFilesFromPathAsync(dialog.SelectedPath);
+        }
+
+        private async Task LoadFilesFromPathAsync(string folderPath)
+        {
+            _rootFolderPath = folderPath;
 
             Instruments.Clear();
             PdfFiles.Clear();
             LogMessages.Clear();
             ProgressValue = 0;
             _cancellationTokenSource = new CancellationTokenSource();
+            var programNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var aliasPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "aliases.json");
             _aliasManager.LoadAliases(aliasPath);
@@ -181,11 +235,21 @@ namespace LibraryManager.ViewModels
                 _logger.Log($"Failed to get instrument folders: {ex.Message}", LogLevel.Error);
                 return;
             }
-           
+
             var instrumentList = new List<InstrumentStatus>();
 
             foreach (var dir in instrumentDirs)
             {
+                foreach (var sub in Directory.GetDirectories(dir))
+                {
+                    string subName = Path.GetFileName(sub);
+
+                    if (!string.Equals(subName, "Архив", StringComparison.OrdinalIgnoreCase))
+                    {
+                        programNames.Add(subName);
+                    }
+                }
+
                 var instrumentName = Path.GetFileName(dir);
                 var aliasEntry = _aliasManager.Match(instrumentName);
 
@@ -203,6 +267,13 @@ namespace LibraryManager.ViewModels
                     Aliases = aliasEntry?.Aliases ?? new List<string>(),
                     IsAliasMatched = aliasEntry != null
                 });
+            }
+
+            _allProgramNames = programNames.OrderBy(n => n).ToList();
+            ProgramNameSuggestions.Clear();
+            foreach (var name in _allProgramNames)
+            {
+                ProgramNameSuggestions.Add(name);
             }
 
             Instruments.Clear();
@@ -242,6 +313,11 @@ namespace LibraryManager.ViewModels
                 foreach (var file in sortedFiles)
                 {
                     PdfFiles.Add(file);
+                }
+
+                if (!string.IsNullOrWhiteSpace(ProgramName))
+                {
+                    SetProgramFolders();
                 }
 
                 _logger.Log($"Loaded {files.Count} PDF files and {Instruments.Count} instruments from {_rootFolderPath}",
@@ -343,6 +419,9 @@ namespace LibraryManager.ViewModels
                 {
                     _logger.Log("No files were moved", LogLevel.Error);
                 }
+
+                await RefreshDataAsync();
+
             }
             catch(OperationCanceledException)
             {
@@ -359,6 +438,54 @@ namespace LibraryManager.ViewModels
 
             _logger.Log("Checked program folders for selected instruments");
             RefreshCommands();
+        }
+
+        public void UpdateCurrentSuggestion()
+        {
+            if (string.IsNullOrWhiteSpace(_programName) || _allProgramNames == null || _allProgramNames.Count == 0)
+            {
+                CurrentSuggestionDisplay = string.Empty;
+                SuggestionMargin = new Thickness(0, 0, 0, 0);
+                return;
+            }
+
+            var match = _allProgramNames
+                .FirstOrDefault(p => p.StartsWith(_programName, StringComparison.OrdinalIgnoreCase) && 
+                !string.Equals(p, _programName, StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
+            {
+                CurrentSuggestionDisplay = match.Substring(_programName.Length);
+            }
+            else
+            {
+                CurrentSuggestionDisplay = string.Empty;
+            }
+        }
+
+        public void ClearCurrentSuggestion()
+        {
+            CurrentSuggestionDisplay = string.Empty;
+        }
+
+        private void FilterProgramSuggestions(string text)
+        {
+            ProgramNameSuggestions.Clear();
+
+            if (_allProgramNames == null || _allProgramNames.Count == 0) return;
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                foreach (var p in _allProgramNames)
+                    ProgramNameSuggestions.Add(p);
+                return;
+            }
+
+            foreach (var p in _allProgramNames
+                     .Where(p => p.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                ProgramNameSuggestions.Add(p);
+            }
         }
 
         private void UpdateInstrumentPath(InstrumentStatus instrument, string rootFolder, string programName)
@@ -526,7 +653,7 @@ namespace LibraryManager.ViewModels
             _logger.Log("All matched files assigned.", LogLevel.Success);
         }
 
-        private void ConfirmAndArchive()
+        private async Task ConfirmAndArchive()
         {
             bool confirmed = _dialogService.Confirm(
                 "Are you sure you want to archive all program folders?\nThis will move files permanently to their Archive folders.",
@@ -539,10 +666,10 @@ namespace LibraryManager.ViewModels
                 return;
             }
 
-            ArchiveExecute();
+            await ArchiveExecute();
         }
 
-        private void ArchiveExecute()
+        private async Task ArchiveExecute()
         {
             if (string.IsNullOrWhiteSpace(ProgramName))
             {
@@ -606,6 +733,63 @@ namespace LibraryManager.ViewModels
 
             RefreshProgramPaths();
             RefreshCommands();
+            await RefreshDataAsync();
+        }
+
+        private async Task MoveToRootExecute()
+        {
+            if (string.IsNullOrWhiteSpace(ProgramName))
+            {
+                _logger.Log("No program is currently set. Move aborted.", LogLevel.Error);
+                return;
+            }
+
+            foreach (var instrument in Instruments)
+            {
+                if (string.IsNullOrWhiteSpace(instrument.ProgramFolderPath))
+                    continue;
+
+                string sourcePath = instrument.ProgramFolderPath;
+                string destinationPath = _rootFolderPath;
+
+                if (!Directory.Exists(sourcePath))
+                    continue;
+
+                try
+                {
+                    foreach (var file in Directory.GetFiles(sourcePath))
+                    {
+                        string fileName = Path.GetFileName(file);
+                        string destFile = Path.Combine(destinationPath, fileName);
+
+                        if (File.Exists(destFile))
+                            File.Delete(destFile);
+
+                        File.Move(file, destFile);
+                    }
+
+                    _logger.Log($"Moved files from '{instrument.Name}' to root.", LogLevel.Success);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Log($"Error moving files from '{instrument.Name}': {ex.Message}", LogLevel.Error);
+                }
+            }
+
+            RefreshProgramPaths();
+            RefreshCommands();
+            await RefreshDataAsync();
+        }
+
+        public async Task RefreshDataAsync()
+        {
+            if (string.IsNullOrWhiteSpace(_rootFolderPath) || !Directory.Exists(_rootFolderPath))
+            {
+                _logger.Log("No folder loaded to refresh.", LogLevel.Error);
+                return;
+            }
+
+            await LoadFilesFromPathAsync(_rootFolderPath);
         }
 
         private void RefreshProgramPaths()

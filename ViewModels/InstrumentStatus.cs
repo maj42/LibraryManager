@@ -30,6 +30,20 @@ namespace LibraryManager.ViewModels
             set { _isSelected = value; OnPropertyChanged(); }
         }
 
+        private bool _isExpanded = true;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (_isExpanded != value)
+                {
+                    _isExpanded = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public ObservableCollection<PdfFile> AssignedFiles { get; set; } = new();
         public override string ToString()
         {

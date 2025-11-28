@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
+using LibraryManager.Adorners;
 using LibraryManager.Models;
-using LibraryManager.Services.FileManagement;
-using LibraryManager.Services.PdfPreview;
 using LibraryManager.ViewModels;
 
 namespace LibraryManager
@@ -86,6 +87,66 @@ namespace LibraryManager
             }
         }
 
+        private void ProgramTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            var vm = DataContext as MainViewModel;
+            if (vm == null) return;
+            
+            var tb = sender as TextBox;
+            if (tb == null) return;
+
+            if (!string.IsNullOrEmpty(vm.CurrentSuggestionDisplay) && (e.Key == Key.Tab || e.Key == Key.Enter))
+            {
+                tb.Text = tb.Text + vm.CurrentSuggestionDisplay;
+                tb.CaretIndex = tb.Text.Length;
+
+                vm.ProgramName = tb.Text;
+
+                vm.ClearCurrentSuggestion();
+
+                e.Handled |= true;
+                return;
+            }
+
+            if (e.Key == Key.Escape)
+            {
+                vm.ClearCurrentSuggestion();
+                e.Handled = true;
+            }
+        }
+
+        private void ProgramTextBox_TextChanged(object sender, EventArgs e)
+        {
+            var vm = DataContext as MainViewModel;
+            if (vm == null) return;
+
+            var tb = sender as TextBox;
+            if (tb == null) return;
+
+            vm.UpdateCurrentSuggestion();
+
+            if (!string.IsNullOrEmpty(vm.CurrentSuggestionDisplay))
+            {
+                var dpi = VisualTreeHelper.GetDpi(tb);
+
+                var formatted = new FormattedText(
+                    tb.Text,
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    tb.FlowDirection,
+                    new Typeface(tb.FontFamily, tb.FontStyle, tb.FontWeight, tb.FontStretch),
+                    tb.FontSize,
+                    Brushes.Black,
+                    dpi.PixelsPerDip);
+
+                vm.SuggestionMargin = new Thickness(
+                    formatted.WidthIncludingTrailingWhitespace + tb.Padding.Left, 0, 0, 0);
+            }
+            else
+            {
+                vm.SuggestionMargin = new Thickness(0, 0, 0, 0);
+            }
+        }
+
         private void Instrument_DragOver(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(typeof(PdfFile)))
@@ -93,10 +154,9 @@ namespace LibraryManager
                 e.Effects = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)
                             ? DragDropEffects.Copy : DragDropEffects.Move;
 
-                var border = sender as Border;
-                if (border != null)
+                if (sender is Expander expander)
                 {
-                    border.Background = Brushes.LightGreen;
+                    expander.Background = Brushes.LightGreen;
                 }
             }
             else
@@ -108,10 +168,9 @@ namespace LibraryManager
 
         private void Instrument_DragLeave(object sender, EventArgs e)
         {
-            var border = sender as Border;
-            if (border != null)
+            if (sender is Expander expander)
             {
-                border.Background = Brushes.Transparent;
+                expander.Background = Brushes.LightGreen;
             }
         }
 
@@ -119,21 +178,17 @@ namespace LibraryManager
         {
             if (e.Data.GetDataPresent(typeof(PdfFile)))
             {
+                if (sender is Expander expander)
+                    expander.Background = Brushes.Transparent;
+
+                if (!e.Data.GetDataPresent(typeof(PdfFile))) return;
+
                 var file = e.Data.GetData(typeof(PdfFile)) as PdfFile;
-                var border = sender as Border;
-                var instrument = border!.Tag as InstrumentStatus;
-
-                if (border != null)
-                {
-                    border.Background = Brushes.Transparent;
-                }
-
+                var instrument = (sender as Expander)?.Tag as InstrumentStatus;
                 if (file != null && instrument != null)
                 {
-                    var viewModel = DataContext as MainViewModel;
                     bool copy = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
-
-                    viewModel?.AssignPdfToInstrument(file, instrument, copy);
+                    (_viewModel ?? DataContext as MainViewModel)?.AssignPdfToInstrument(file, instrument, copy);
                 }
             }
         }
@@ -154,49 +209,6 @@ namespace LibraryManager
         private void ScrollViewer_PreviewDragOver(object sender, DragEventArgs e)
         {
             e.Handled = true;
-        }
-
-        private void Border_PreviewDragEnter(object sender, DragEventArgs e)
-        {
-            if (e.Data.GetDataPresent(typeof(PdfFile)))
-            {
-                var border = sender as Border;
-                if (border != null)
-                {
-                    border.Background = Brushes.LightGreen;
-                }
-            }
-        }
-
-        private void Border_PreviewDragLeave(object sender, DragEventArgs e)
-        {
-            var border = sender as Border;
-            if (border != null)
-            {
-                border.Background = Brushes.Transparent;
-            }
-        }
-
-        private void Border_PreviewDrop(object sender, DragEventArgs e)
-        {
-            var border = sender as Border;
-            if (border != null)
-            {
-                border.Background = Brushes.Transparent;
-            }
-
-            if (e.Data.GetDataPresent(typeof (PdfFile)))
-            {
-                var file = e.Data.GetData(typeof(PdfFile)) as PdfFile;
-                var instrument = border?.Tag as InstrumentStatus;
-
-                if (file != null && instrument != null)
-                {
-                    var viewModel = DataContext as MainViewModel;
-                    bool copy = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
-                    viewModel?.AssignPdfToInstrument(file, instrument, copy);
-                }
-            }
         }
     }
 }

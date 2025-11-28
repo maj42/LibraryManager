@@ -26,14 +26,6 @@ namespace LibraryManager.Services.FileManagement
                 FileName = Path.GetFileName(path),
                 FullPath = path
             }).ToList();
-            //    var files = Directory.GetFiles(folderPath, "*.pdf");
-            //    var list = files.Select(path => new PdfFile
-            //    {
-            //        FileName = Path.GetFileName(path),
-            //        FullPath = path
-            //    }).ToList();
-            //    return list;
-            //}, token);
         }
 
         public async Task<List<string>> MovePdfsAsync(IEnumerable<PdfFile> files, string targetFolder, IProgress<int> progress = null, 
@@ -61,30 +53,6 @@ namespace LibraryManager.Services.FileManagement
             }
 
             return logs;
-            //return Task.Run(() =>
-            //{
-            //    List<string> logs = new();
-            //    int count = 0;
-            //    foreach (var file in files)
-            //    {
-            //        token.ThrowIfCancellationRequested();
-
-            //        try
-            //        {
-            //            string targetPath = GetSafeDestinationPath(targetFolder, file.FileName);
-            //            File.Move(file.FullPath, targetPath);
-            //            logs.Add($"Moved: {file.FileName}");
-            //        }
-            //        catch (Exception ex)
-            //        {
-            //            logs.Add($"Failed to move {file.FileName}: {ex.Message}");
-            //        }
-
-            //        count++;
-            //        progress?.Report(count);
-            //    }
-            //    return logs;
-            //}, token);
         }
 
         private string GetSafeDestinationPath(string folder, string fileName)

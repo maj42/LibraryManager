@@ -45,16 +45,24 @@
                     Orientation="Vertical" Margin="0,0,0,10">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" 
                         Margin="0,0,0,5">
-                <Button Content="Load PDF Files" Command="{Binding LoadFilesCommand}" 
+                <Button Content="Load PDF Files" 
+                        Command="{Binding LoadFilesCommand}" 
                         Margin="0,0,10,0"/>
                 <Button Content="Assign Matched Files" 
                         Command="{Binding AssignMatchedFilesCommand}" 
                         Margin="0,0,10,0"/>
-                <Button Content="Move Files" Command="{Binding MoveFilesCommand}" 
+                <Button Content="Move Files" 
+                        Command="{Binding MoveFilesCommand}" 
                         Margin="0,0,10,0"/>
-                <Button Content="Archive" Command="{Binding ArchiveCommand}" 
+                <Button Content="Archive" 
+                        Command="{Binding ArchiveCommand}" 
                         Margin="0,0,10,0"/>
-                <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="0,0,10,0"/>
+                <Button Content="Move to Root"
+                        Command="{Binding MoveToRootCommand}"
+                        Margin="0,0,10,0"/>
+                <Button Content="Cancel" 
+                        Command="{Binding CancelCommand}" 
+                        Margin="0,0,10,0"/>
             </StackPanel>
 
             <ProgressBar Height="10" Margin="0,0,0,5"
@@ -63,9 +71,25 @@
             
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Program:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                <TextBox Width="200"
-                           Text="{Binding ProgramName, UpdateSourceTrigger=PropertyChanged}"
-                           Margin="0,0,10,0"/>
+                <Grid Width="200" Margin="0,0,10,0">
+                    <TextBlock x:Name="SuggestionTextBlock"
+                               Text="{Binding CurrentSuggestionDisplay}"
+                               FontFamily="{Binding ElementName=ProgramTextBox, Path=FontFamily}"
+                               FontSize="{Binding ElementName=ProgramTextBox, Path=FontSize}"
+                               Padding="{Binding ElementName=ProgramTextBox, Path=Padding}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Foreground="LightGray"
+                               IsHitTestVisible="False"
+                               Panel.ZIndex="999"
+                               Margin="{Binding SuggestionMargin}"/>
+                    <TextBox x:Name="ProgramTextBox"
+                             Text="{Binding ProgramName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalContentAlignment="Center"
+                             PreviewKeyDown="ProgramTextBox_PreviewKeyDown"
+                             TextChanged="ProgramTextBox_TextChanged"
+                             Background="Transparent"/>
+                </Grid>
                 <Button Content="Set" Command="{Binding SetProgramFolderCommand}"
                         CommandParameter="{Binding}"
                         IsEnabled="{Binding CanApplyProgram}"
@@ -78,7 +102,12 @@
         <!-- Instruments and preview/metadata -->
         <TabControl Grid.Row="1" Grid.Column="2" Margin="10,0,0,0">
             <TabItem Header="Instruments">
-                <ListBox ItemsSource="{Binding Instruments}"
+                <DockPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5" DockPanel.Dock="Top">
+                        <Button Content="Fold All" Command="{Binding FoldAllCommand}" Margin="0,0,5,0"/>
+                        <Button Content="Unfold All" Command="{Binding UnfoldAllCommand}"/>
+                    </StackPanel>
+                    <ListBox ItemsSource="{Binding Instruments}"
                              Background="Transparent"
                              BorderThickness="0"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -86,74 +115,73 @@
                              ScrollViewer.CanContentScroll="True"
                              VirtualizingPanel.ScrollUnit="Pixel"
                              PreviewDragOver="ScrollViewer_PreviewDragOver">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Border AllowDrop="True"
-                                DragOver="Instrument_DragOver"
-                                PreviewDragEnter="Border_PreviewDragEnter"
-                                PreviewDragLeave="Border_PreviewDragLeave"
-                                PreviewDrop="Border_PreviewDrop"
-                                Tag="{Binding}"
-                                SnapsToDevicePixels="True"
-                                Focusable="True"
-                                IsHitTestVisible="True"
-                                CornerRadius="10"
-                                Background="#0100">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Expander IsExpanded="{Binding IsExpanded}"
+                                          AllowDrop="True"
+                                          Background="Transparent"
+                                          DragOver="Instrument_DragOver"
+                                          PreviewDragLeave="Instrument_DragLeave"
+                                          PreviewDrop="Instrument_Drop"
+                                          Tag="{Binding}">
+                                    <Expander.Header>
+                                        <StackPanel Orientation="Horizontal">
+                                            <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Name}" Margin="5,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="(Program exists)"
+                                                       Foreground="Green"
+                                                       Margin="5,0,0,0"
+                                                       Visibility="{Binding ProgramFolderExists, 
+                                                           Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        </StackPanel>
+                                    </Expander.Header>
 
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="BorderBrush" Value="Transparent"/>
-                                        <Setter Property="BorderThickness" Value="2"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsAliasMatched}" Value="True">
-                                                <Setter Property="BorderBrush" Value="LightGreen"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
+                                    <Border SnapsToDevicePixels="True"
+                                            Focusable="True"
+                                            IsHitTestVisible="True"
+                                            CornerRadius="10"
+                                            Background="#0100"
+                                            Margin="0,5">
 
-                                <Grid Margin="0,5">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="2"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAliasMatched}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="LightGreen"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
 
-                                    <StackPanel Orientation="Horizontal">
-                                        <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding Name}" Margin="5,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="(Program exists)"
-                                           Foreground="Green"
-                                           Margin="5,0,0,0"
-                                           Visibility="{Binding ProgramFolderExists, 
-                                           Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                    </StackPanel>
-
-                                    <ItemsControl Grid.Row="1"
-                                        ItemsSource="{Binding AssignedFiles}"
-                                        Margin="10,0,0,0">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal"
-                                                         PreviewMouseMove="AssignedFile_PreviewMouseMove">
-                                                    <TextBlock Text="• " Foreground="DarkSlateGray"/>
-                                                    <TextBlock Text="{Binding FileName}" Foreground="Black"/>
-                                                    <TextBlock Text=" → " Foreground="Gray" Margin="5,0,0,0"
-                                                         Visibility="{Binding MatchedInstrumentName, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                    <TextBlock Text="{Binding MatchedInstrumentName}" Foreground="SlateGray"
-                                                       FontStyle="Italic"
-                                                       Visibility="{Binding MatchedInstrumentName, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Grid>
-                            </Border>
-
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                                        <ItemsControl ItemsSource="{Binding AssignedFiles}" Margin="10,5,0,5">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal"
+                                                                PreviewMouseMove="AssignedFile_PreviewMouseMove">
+                                                        <TextBlock Text="• " Foreground="DarkSlateGray"/>
+                                                        <TextBlock Text="{Binding FileName}" Foreground="Black"/>
+                                                        <TextBlock Text=" → " Foreground="Gray" Margin="5,0,0,0"
+                                                                   Visibility="{Binding MatchedInstrumentName, 
+                                                                       Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                        <TextBlock Text="{Binding MatchedInstrumentName}"
+                                                                   Foreground="SlateGray"
+                                                                   FontStyle="Italic"
+                                                                   Visibility="{Binding MatchedInstrumentName, 
+                                                                       Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Border>
+                                </Expander>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
             </TabItem>
-
+            
             <TabItem Header="Preview"
                      DataContext="{Binding Preview}"
                      MouseWheel="Preview_MouseWheel">
