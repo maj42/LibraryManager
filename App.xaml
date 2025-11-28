@@ -7,6 +7,7 @@
         <ResourceDictionary>
             <resConverters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <resConverters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <resConverters:SelectedTabToVisibilityConverter x:Key="SelectedTabToVisibilityConverter"/>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/Light.xaml"/>
             </ResourceDictionary.MergedDictionaries>

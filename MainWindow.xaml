@@ -100,29 +100,63 @@
         </StackPanel>
         
         <!-- Instruments and preview/metadata -->
-        <TabControl Grid.Row="1" Grid.Column="2" Margin="10,0,0,0">
-            <TabItem Header="Instruments">
+        <TabControl x:Name="MainTabs"
+                    Grid.Row="1" 
+                    Grid.Column="2" 
+                    Margin="10,0,0,0">
+            <TabControl.Template>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0">
+                            <StackPanel Orientation="Horizontal" 
+                                        DockPanel.Dock="Right" 
+                                        Margin="0,0,10,0">
+                                <StackPanel.Resources>
+                                    <Style TargetType="Button" 
+                                           BasedOn="{StaticResource {x:Type Button}}">
+                                        <Setter Property="Padding" Value="4,0"/>
+                                        <Setter Property="MinHeight" Value="20"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </StackPanel.Resources>
+                                <Button Content="Fold All" Command="{Binding FoldAllCommand}" Margin="0,0,5,0"/>
+                                <Button Content="Unfold All" Command="{Binding UnfoldAllCommand}"/>
+                            </StackPanel>
+                            <TabPanel x:Name="HeaderPanel"
+                                      Panel.ZIndex="1"
+                                      IsItemsHost="True"
+                                      Background="Transparent"/>
+                        </DockPanel>
+                        <ContentPresenter Grid.Row="1"
+                                          x:Name="ContentSite"
+                                          ContentSource="SelectedContent"/>
+                    </Grid>
+                </ControlTemplate>
+            </TabControl.Template>
+            
+            <TabItem x:Name="InstrumentsTab" 
+                     Header="Instruments">
                 <DockPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5" DockPanel.Dock="Top">
-                        <Button Content="Fold All" Command="{Binding FoldAllCommand}" Margin="0,0,5,0"/>
-                        <Button Content="Unfold All" Command="{Binding UnfoldAllCommand}"/>
-                    </StackPanel>
                     <ListBox ItemsSource="{Binding Instruments}"
                              Background="Transparent"
                              BorderThickness="0"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                              HorizontalContentAlignment="Stretch"
                              ScrollViewer.CanContentScroll="True"
-                             VirtualizingPanel.ScrollUnit="Pixel"
-                             PreviewDragOver="ScrollViewer_PreviewDragOver">
+                             VirtualizingPanel.ScrollUnit="Pixel">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Expander IsExpanded="{Binding IsExpanded}"
                                           AllowDrop="True"
                                           Background="Transparent"
-                                          DragOver="Instrument_DragOver"
+                                          PreviewDragOver="Instrument_DragOver"
                                           PreviewDragLeave="Instrument_DragLeave"
                                           PreviewDrop="Instrument_Drop"
+                                          PreviewMouseWheel="Instrument_MouseWheel"
                                           Tag="{Binding}">
                                     <Expander.Header>
                                         <StackPanel Orientation="Horizontal">
@@ -136,11 +170,11 @@
                                         </StackPanel>
                                     </Expander.Header>
 
-                                    <Border SnapsToDevicePixels="True"
-                                            Focusable="True"
-                                            IsHitTestVisible="True"
+                                    <Border x:Name="InstrumentHighlightBorder"
+                                            SnapsToDevicePixels="True"
+                                            Focusable="False"
                                             CornerRadius="10"
-                                            Background="#0100"
+                                            Background="Transparent"
                                             Margin="0,5">
 
                                         <Border.Style>
@@ -155,11 +189,13 @@
                                             </Style>
                                         </Border.Style>
 
-                                        <ItemsControl ItemsSource="{Binding AssignedFiles}" Margin="10,5,0,5">
+                                        <ItemsControl ItemsSource="{Binding AssignedFiles}" 
+                                                      Margin="10,5,0,5"
+                                                      IsHitTestVisible="False">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <StackPanel Orientation="Horizontal"
-                                                                PreviewMouseMove="AssignedFile_PreviewMouseMove">
+                                                                IsHitTestVisible="False">
                                                         <TextBlock Text="• " Foreground="DarkSlateGray"/>
                                                         <TextBlock Text="{Binding FileName}" Foreground="Black"/>
                                                         <TextBlock Text=" → " Foreground="Gray" Margin="5,0,0,0"

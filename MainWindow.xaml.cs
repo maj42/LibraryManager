@@ -5,7 +5,6 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using LibraryManager.Adorners;
 using LibraryManager.Models;
 using LibraryManager.ViewModels;
 
@@ -53,7 +52,7 @@ namespace LibraryManager
                 Math.Abs(currentPosition.Y - _dragStartPoint.Y) > DragThreshold)
             {
                 _originalDragSource = null;
-                DragDrop.DoDragDrop((DependencyObject)sender, file, DragDropEffects.Copy);
+                DragDrop.DoDragDrop((DependencyObject)sender, file, DragDropEffects.Copy | DragDropEffects.Move);
             }
             
         }
@@ -149,48 +148,68 @@ namespace LibraryManager
 
         private void Instrument_DragOver(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(PdfFile)))
-            {
-                e.Effects = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)
-                            ? DragDropEffects.Copy : DragDropEffects.Move;
-
-                if (sender is Expander expander)
-                {
-                    expander.Background = Brushes.LightGreen;
-                }
-            }
-            else
+            if (!e.Data.GetDataPresent(typeof(PdfFile)))
             {
                 e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;    
+            }
+
+            e.Effects = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)
+                            ? DragDropEffects.Copy 
+                            : DragDropEffects.Move;
+
+            if (sender is Expander expander)
+            {
+                if (expander.Content is Border border)
+                {
+                    border.Background = Brushes.LightGreen;
+                }
             }
             e.Handled = true;
         }
 
-        private void Instrument_DragLeave(object sender, EventArgs e)
+        private void Instrument_DragLeave(object sender, DragEventArgs e)
         {
             if (sender is Expander expander)
             {
-                expander.Background = Brushes.LightGreen;
+                if (expander.Content is Border border)
+                    border.Background = Brushes.Transparent;
             }
+            e.Handled = true;
         }
 
         private void Instrument_Drop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(PdfFile)))
+            if (!e.Data.GetDataPresent(typeof(PdfFile)))
+                return;
+
+            if (sender is Expander expander && expander.Content is Border border)
             {
-                if (sender is Expander expander)
-                    expander.Background = Brushes.Transparent;
-
-                if (!e.Data.GetDataPresent(typeof(PdfFile))) return;
-
-                var file = e.Data.GetData(typeof(PdfFile)) as PdfFile;
-                var instrument = (sender as Expander)?.Tag as InstrumentStatus;
-                if (file != null && instrument != null)
-                {
-                    bool copy = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
-                    (_viewModel ?? DataContext as MainViewModel)?.AssignPdfToInstrument(file, instrument, copy);
-                }
+                border.Background = Brushes.Transparent;
             }
+
+            var file = e.Data.GetData(typeof(PdfFile)) as PdfFile;
+            var instrument = (sender as Expander)?.Tag as InstrumentStatus;
+
+            if (file != null && instrument != null)
+            {
+                bool copy = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+                _viewModel.AssignPdfToInstrument(file, instrument, copy);
+            }
+            e.Handled = true;
+        }
+
+        private void Instrument_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            e.Handled = true;
+            var evt = new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+            {
+                RoutedEvent = UIElement.MouseWheelEvent,
+                Source = sender
+            };
+
+            ((UIElement)((FrameworkElement)sender).Parent).RaiseEvent(evt);
         }
 
         private void PdfFileListBox_Drop(object sender, DragEventArgs e)
@@ -204,11 +223,6 @@ namespace LibraryManager
                     vm?.UnassignFile(file);
                 }
             }
-        }
-
-        private void ScrollViewer_PreviewDragOver(object sender, DragEventArgs e)
-        {
-            e.Handled = true;
         }
     }
 }
