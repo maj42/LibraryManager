@@ -13,8 +13,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using WinForms = System.Windows.Forms;
 using System.Windows.Input;
+using WinForms = System.Windows.Forms;
 
 
 namespace LibraryManager.ViewModels
@@ -45,6 +45,7 @@ namespace LibraryManager.ViewModels
         public ICommand FoldAllCommand { get; }
         public ICommand UnfoldAllCommand { get; }
         public ICommand MoveToRootCommand { get; }
+        public ICommand RenameProgramCommand { get; }
         
         private readonly AliasManager _aliasManager = new AliasManager();
         private readonly IPdfFileManager _pdfFileManager;
@@ -54,15 +55,6 @@ namespace LibraryManager.ViewModels
         private RelayCommand _createProgramFoldersCommand;
 
         public event Action<string> InlineSuggestionChanged;
-
-        public ICommand SetProgramFolderCommand => new RelayCommand(() =>
-        {
-            foreach (var instrument in Instruments.Where(i => i.IsSelected))
-            {
-                UpdateInstrumentPath(instrument, _rootFolderPath, ProgramName);
-            }
-            _logger.Log("Set program folders for selected instruments", LogLevel.Success);
-        });
 
         public MainViewModel(IPdfFileManager pdfFileManager, 
                              IPdfViewerService pdfViewerService,
@@ -82,6 +74,7 @@ namespace LibraryManager.ViewModels
             AssignMatchedFilesCommand = new RelayCommand(AssignMatchedFiles);
             _undoCommand = new RelayCommand(UndoLastAssignment, CanUndo);
             ArchiveCommand = new AsyncRelayCommand(ConfirmAndArchive);
+            RenameProgramCommand = new RelayCommand(RenameProgram, CanRenameProgram);
             FoldAllCommand = new RelayCommand(() => 
             {
                 foreach (var instrument in Instruments)
@@ -102,6 +95,7 @@ namespace LibraryManager.ViewModels
             set { _progressValue = value; OnPropertyChanged(); }
         }
 
+        private string _lastSetProgramName;
         private string _programName;
         public string ProgramName
         {
@@ -117,6 +111,12 @@ namespace LibraryManager.ViewModels
                     UpdateCurrentSuggestion();
                     
                     CanApplyProgram = !string.IsNullOrEmpty(_programName);
+
+                    if (_lastSetProgramName != null && _programName != _lastSetProgramName)
+                    {
+                        IsProgramSet = false;
+                    }
+
                     RefreshProgramPaths();
                     RefreshCommands();
                 }
@@ -151,6 +151,7 @@ namespace LibraryManager.ViewModels
             {
                 _isProgramSet = value;
                 OnPropertyChanged();
+                RefreshCommands();
             }
         }
 
@@ -190,6 +191,8 @@ namespace LibraryManager.ViewModels
                 OnPropertyChanged();
             }
         }
+
+        private bool _isUpdatingPath;
 
 
         // --------------------------- Methods --------------------------------
@@ -437,6 +440,8 @@ namespace LibraryManager.ViewModels
             }
 
             _logger.Log("Checked program folders for selected instruments");
+            IsProgramSet = true;
+            _lastSetProgramName = ProgramName;
             RefreshCommands();
         }
 
@@ -490,28 +495,51 @@ namespace LibraryManager.ViewModels
 
         private void UpdateInstrumentPath(InstrumentStatus instrument, string rootFolder, string programName)
         {
-            if (!instrument.IsSelected || string.IsNullOrWhiteSpace(rootFolder) || string.IsNullOrWhiteSpace(programName))
-            {
-                return;
-            }
+            if (_isUpdatingPath) return;
 
-            var path = Path.Combine(rootFolder, instrument.Name, ProgramName);
-            instrument.ProgramFolderPath = path;
+            try
+            {
+                _isUpdatingPath = true;
 
-            if (Directory.Exists(path))
-            {
-                instrument.ProgramFolderExists = true;
-                _logger.Log($"Program folder for '{instrument.Name}' found: {path}");
+                if (!instrument.IsSelected || string.IsNullOrWhiteSpace(rootFolder) || string.IsNullOrWhiteSpace(programName))
+                {
+                    return;
+                }
+
+                var path = Path.Combine(rootFolder, instrument.Name, ProgramName);
+                instrument.ProgramFolderPath = path;
+
+                if (Directory.Exists(path))
+                {
+                    instrument.ProgramFolderExists = true;
+
+                    instrument.ExistingFiles.Clear();
+                    foreach (var file in Directory.GetFiles(path, "*.pdf"))
+                    {
+                        instrument.ExistingFiles.Add(new PdfFile
+                        {
+                            FileName = Path.GetFileName(file),
+                            FullPath = file,
+                            IsFromProgramFolder = true
+                        });
+                    }
+
+                }
+                else
+                {
+                    instrument.ProgramFolderExists = false;
+                    instrument.ExistingFiles.Clear();
+                }
             }
-            else
+            finally
             {
-                instrument.ProgramFolderExists = false;
+                _isUpdatingPath = false;
             }
         }
 
         private bool CanSetProgram()
         {
-            return !string.IsNullOrWhiteSpace(ProgramName);
+            return !string.IsNullOrWhiteSpace(ProgramName) && ProgramName != _lastSetProgramName;
         }
 
         private void ApplyProgram()
@@ -781,6 +809,65 @@ namespace LibraryManager.ViewModels
             await RefreshDataAsync();
         }
 
+        private void RenameProgram()
+        {
+            if (string.IsNullOrWhiteSpace(ProgramName)) return;
+
+            string newName = _dialogService.ShowInputDialog(
+                $"Rename Program: {ProgramName}",
+                "Enter new program name: ",
+                ProgramName);
+
+            if (string.IsNullOrWhiteSpace(newName) || newName == ProgramName) return;
+
+            string oldName = ProgramName;
+
+            foreach (var instrument in Instruments.Where(i => i.IsSelected))
+            {
+                try
+                {
+                    string oldFolder = Path.Combine(_rootFolderPath, instrument.Name, oldName);
+                    string newFolder = Path.Combine(_rootFolderPath, instrument.Name, newName);
+                
+                    if (Directory.Exists(oldFolder))
+                    {
+                        if (Directory.Exists(newFolder))
+                        {
+                            var result = _dialogService.Confirm($"Folder '{newFolder}' already exists for {instrument.Name}. Overwrite?",
+                                        "Overwrite confirmation");
+
+                            if (!result) continue;
+
+                            Directory.Delete(newFolder, true);
+                        }
+
+                        Directory.Move(oldFolder, newFolder);
+                    }
+
+                    instrument.ProgramFolderPath = newFolder;
+                    instrument.ProgramFolderExists = Directory.Exists(newFolder);
+                }
+
+                catch (Exception ex)
+                {
+                    _logger.Log($"Error renaming folder for {instrument.Name}: {ex.Message}", LogLevel.Error);
+                }
+            }
+
+            ProgramName = newName;
+
+            RefreshProgramPaths();
+            RefreshProgramSuggestions();
+            RefreshCommands();
+
+            _logger.Log($"Program renamed from '{oldName}' to '{newName}'", LogLevel.Success);
+        }
+
+        public bool CanRenameProgram()
+        {
+            return IsProgramSet && !string.IsNullOrWhiteSpace(ProgramName);
+        }
+
         public async Task RefreshDataAsync()
         {
             if (string.IsNullOrWhiteSpace(_rootFolderPath) || !Directory.Exists(_rootFolderPath))
@@ -789,14 +876,43 @@ namespace LibraryManager.ViewModels
                 return;
             }
 
+            _undoStack.Clear();
+
             await LoadFilesFromPathAsync(_rootFolderPath);
+        }
+
+        private void RefreshProgramSuggestions()
+        {
+            if (_allProgramNames.Contains(ProgramName, StringComparer.OrdinalIgnoreCase))
+                return;
+
+            ProgramNameSuggestions.Clear();
+
+            _allProgramNames = _allProgramNames
+                .Where(n => !string.Equals(n, ProgramName, StringComparison.OrdinalIgnoreCase))
+                .Prepend(ProgramName)
+                .OrderBy(n => n)
+                .ToList();
+
+            foreach (var name in _allProgramNames)
+                ProgramNameSuggestions.Add(name);
         }
 
         private void RefreshProgramPaths()
         {
-            foreach (var instrument in Instruments)
+            if (_isUpdatingPath) return;
+            _isUpdatingPath = true;
+
+            try
             {
-                UpdateInstrumentPath(instrument, _rootFolderPath, _programName);
+                foreach (var instrument in Instruments)
+                {
+                    UpdateInstrumentPath(instrument, _rootFolderPath, _programName);
+                }
+            }
+            finally
+            {
+                _isUpdatingPath = false;
             }
         }
 
@@ -804,6 +920,7 @@ namespace LibraryManager.ViewModels
         {
             _setProgramCommand?.RaiseCanExecuteChanged();
             _createProgramFoldersCommand?.RaiseCanExecuteChanged();
+            (RenameProgramCommand as RelayCommand)?.RaiseCanExecuteChanged();
         }
     }
 }

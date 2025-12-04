@@ -7,6 +7,7 @@ namespace LibraryManager.Models
         public bool IsSelected { get; set; }
         public int MatchWeight { get; set; } = int.MaxValue;
         public bool IsAliasMatched { get; set; }
+        public bool IsFromProgramFolder { get; set; }
         public string? MatchedInstrumentName { get; set; }
 
         public override bool Equals(object obj)

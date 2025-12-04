@@ -60,6 +60,9 @@
                 <Button Content="Move to Root"
                         Command="{Binding MoveToRootCommand}"
                         Margin="0,0,10,0"/>
+                <Button Content="Rename"
+                        Command="{Binding RenameProgramCommand}"
+                        Margin="0,0,10,0"/>
                 <Button Content="Cancel" 
                         Command="{Binding CancelCommand}" 
                         Margin="0,0,10,0"/>
@@ -90,7 +93,7 @@
                              TextChanged="ProgramTextBox_TextChanged"
                              Background="Transparent"/>
                 </Grid>
-                <Button Content="Set" Command="{Binding SetProgramFolderCommand}"
+                <Button Content="Set" Command="{Binding SetProgramCommand}"
                         CommandParameter="{Binding}"
                         IsEnabled="{Binding CanApplyProgram}"
                         Margin="0,0,5,0"/>
@@ -189,27 +192,41 @@
                                             </Style>
                                         </Border.Style>
 
-                                        <ItemsControl ItemsSource="{Binding AssignedFiles}" 
-                                                      Margin="10,5,0,5"
-                                                      IsHitTestVisible="False">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <StackPanel Orientation="Horizontal"
-                                                                IsHitTestVisible="False">
-                                                        <TextBlock Text="• " Foreground="DarkSlateGray"/>
-                                                        <TextBlock Text="{Binding FileName}" Foreground="Black"/>
-                                                        <TextBlock Text=" → " Foreground="Gray" Margin="5,0,0,0"
-                                                                   Visibility="{Binding MatchedInstrumentName, 
+                                        <StackPanel Margin="10,5,0,5"
+                                                    IsHitTestVisible="True">
+
+                                            <ItemsControl ItemsSource="{Binding ExistingFiles}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="• " Foreground="#888"/>
+                                                            <TextBlock Text="{Binding FileName}" Foreground="#888"/>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <ItemsControl ItemsSource="{Binding AssignedFiles}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal"
+                                                                    PreviewMouseMove="AssignedFile_PreviewMouseMove">
+                                                            <TextBlock Text="• " Foreground="DarkSlateGray"/>
+                                                            <TextBlock Text="{Binding FileName}" Foreground="Black"/>
+                                                            <TextBlock Text=" → " Foreground="Gray" Margin="5,0,0,0"
+                                                                       Visibility="{Binding MatchedInstrumentName, 
                                                                        Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                        <TextBlock Text="{Binding MatchedInstrumentName}"
-                                                                   Foreground="SlateGray"
-                                                                   FontStyle="Italic"
-                                                                   Visibility="{Binding MatchedInstrumentName, 
+                                                            <TextBlock Text="{Binding MatchedInstrumentName}"
+                                                                       Foreground="SlateGray"
+                                                                       FontStyle="Italic"
+                                                                       Visibility="{Binding MatchedInstrumentName, 
                                                                        Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                        </StackPanel>
                                     </Border>
                                 </Expander>
                             </DataTemplate>

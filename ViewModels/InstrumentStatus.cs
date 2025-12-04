@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using LibraryManager.Helpers;
 using LibraryManager.Models;
 
 namespace LibraryManager.ViewModels
@@ -24,6 +19,7 @@ namespace LibraryManager.ViewModels
         public int Weight { get; set; } = int.MaxValue;
         public bool IsAliasMatched { get; set; }
         public List<string> Aliases { get; set; } = new List<string>();
+        public ObservableCollection<PdfFile> ExistingFiles { get; set; } = new();
         public bool IsSelected
         {
             get => _isSelected;
@@ -45,6 +41,7 @@ namespace LibraryManager.ViewModels
         }
 
         public ObservableCollection<PdfFile> AssignedFiles { get; set; } = new();
+
         public override string ToString()
         {
             return $"{Name} ({AssignedFiles.Count} files)";

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Threading;
 using LibraryManager.Models;
 using LibraryManager.ViewModels;
 
@@ -23,6 +21,17 @@ namespace LibraryManager
 
             _viewModel = viewModel;
             DataContext = _viewModel;
+        }
+
+        private T FindParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            DependencyObject parent = VisualTreeHelper.GetParent(child);
+            while (parent != null)
+            {
+                if (parent is T typedParent) return typedParent;
+                parent = VisualTreeHelper.GetParent(parent);
+            }
+            return null;
         }
 
         private void PdfFilesListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -151,7 +160,7 @@ namespace LibraryManager
             if (!e.Data.GetDataPresent(typeof(PdfFile)))
             {
                 e.Effects = DragDropEffects.None;
-                e.Handled = true;
+                e.Handled = false;
                 return;    
             }
 
@@ -159,14 +168,11 @@ namespace LibraryManager
                             ? DragDropEffects.Copy 
                             : DragDropEffects.Move;
 
-            if (sender is Expander expander)
+            if (sender is Expander expander && expander.Content is Border border)
             {
-                if (expander.Content is Border border)
-                {
-                    border.Background = Brushes.LightGreen;
-                }
+                border.Background = Brushes.LightGreen;
             }
-            e.Handled = true;
+            e.Handled = false;
         }
 
         private void Instrument_DragLeave(object sender, DragEventArgs e)
@@ -202,14 +208,12 @@ namespace LibraryManager
 
         private void Instrument_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            e.Handled = true;
-            var evt = new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+            var scrollViewer = FindParent<ScrollViewer>((DependencyObject)sender);
+            if (scrollViewer != null)
             {
-                RoutedEvent = UIElement.MouseWheelEvent,
-                Source = sender
-            };
-
-            ((UIElement)((FrameworkElement)sender).Parent).RaiseEvent(evt);
+                scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - e.Delta);
+                e.Handled = true;
+            }
         }
 
         private void PdfFileListBox_Drop(object sender, DragEventArgs e)
