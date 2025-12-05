@@ -5,7 +5,7 @@ VisualStudioVersion = 17.12.35728.132
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibraryManager", "LibraryManager.csproj", "{5BB61DE0-0450-46BD-9E25-9C13EDC7B957}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Library Manager v0.7", "..\Library Manager v0.7\Library Manager v0.7.vdproj", "{28D9B701-6B80-DF66-322E-B860BCB6BC91}"
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "LibraryManagerInstaller", "..\LibraryManagerInstaller\LibraryManagerInstaller.vdproj", "{0B771CB1-968A-0FAF-3E8F-19ADC0B41E54}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,12 +29,12 @@ Global
 		{5BB61DE0-0450-46BD-9E25-9C13EDC7B957}.Release|x64.Build.0 = Release|x64
 		{5BB61DE0-0450-46BD-9E25-9C13EDC7B957}.Release|x86.ActiveCfg = Release|x86
 		{5BB61DE0-0450-46BD-9E25-9C13EDC7B957}.Release|x86.Build.0 = Release|x86
-		{28D9B701-6B80-DF66-322E-B860BCB6BC91}.Debug|Any CPU.ActiveCfg = Debug
-		{28D9B701-6B80-DF66-322E-B860BCB6BC91}.Debug|x64.ActiveCfg = Debug
-		{28D9B701-6B80-DF66-322E-B860BCB6BC91}.Debug|x86.ActiveCfg = Debug
-		{28D9B701-6B80-DF66-322E-B860BCB6BC91}.Release|Any CPU.ActiveCfg = Release
-		{28D9B701-6B80-DF66-322E-B860BCB6BC91}.Release|x64.ActiveCfg = Release
-		{28D9B701-6B80-DF66-322E-B860BCB6BC91}.Release|x86.ActiveCfg = Release
+		{0B771CB1-968A-0FAF-3E8F-19ADC0B41E54}.Debug|Any CPU.ActiveCfg = Debug
+		{0B771CB1-968A-0FAF-3E8F-19ADC0B41E54}.Debug|x64.ActiveCfg = Debug
+		{0B771CB1-968A-0FAF-3E8F-19ADC0B41E54}.Debug|x86.ActiveCfg = Debug
+		{0B771CB1-968A-0FAF-3E8F-19ADC0B41E54}.Release|Any CPU.ActiveCfg = Release
+		{0B771CB1-968A-0FAF-3E8F-19ADC0B41E54}.Release|x64.ActiveCfg = Release
+		{0B771CB1-968A-0FAF-3E8F-19ADC0B41E54}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -362,11 +362,14 @@ namespace LibraryManager.ViewModels
 
                         if (!instrument.ProgramFolderExists || string.IsNullOrWhiteSpace(targetFolder))
                         {
-                            _logger.Log($"Skipping '{instrument.Name}: Program folder path is not set or doesn't exist.'", LogLevel.Error);
+                            Application.Current.Dispatcher.Invoke(() =>
+                                _logger.Log($"Skipping '{instrument.Name}: Program folder path is not set or doesn't exist.'", LogLevel.Error));
                             continue;
                         }
 
-                        foreach (var file in instrument.AssignedFiles.ToList())
+                        var filesToMove = instrument.AssignedFiles.ToList();
+
+                        foreach (var file in filesToMove)
                         {
                             if (file == null || string.IsNullOrWhiteSpace(file.FullPath))
                                 continue;
@@ -380,39 +383,43 @@ namespace LibraryManager.ViewModels
                                     if (File.Exists(targetPath))
                                     {
                                         File.Delete(targetPath);
-                                        _logger.Log($"Overwriting existing file at '{targetPath}'", LogLevel.Info);
+                                        Application.Current.Dispatcher.Invoke(() =>
+                                            _logger.Log($"Overwriting existing file at '{targetPath}'", LogLevel.Info));
                                     }
 
                                     File.Move(file.FullPath, targetPath);
                                     movedFilesMap[file.FullPath] = targetPath;
-                                    movedFiles++;
 
-                                    _logger.Log($"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Info);
+                                    Application.Current.Dispatcher.Invoke(() =>
+                                        _logger.Log($"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Info));
                                 }
                                 else
                                 {
                                     string sourcePath = movedFilesMap[file.FullPath];
 
-                                    if (!File.Exists(sourcePath))
-                                    {
-                                        _logger.Log($"Missing source for copy: {sourcePath}", LogLevel.Error);
-                                        continue;
-                                    }
-
                                     if (File.Exists(targetPath))
                                     {
                                         File.Delete(targetPath);
-                                        _logger.Log($"Overwriting existing file at '{targetPath}'", LogLevel.Info);
+                                        Application.Current.Dispatcher.Invoke(() =>
+                                            _logger.Log($"Overwriting existing file at '{targetPath}'", LogLevel.Info));
                                     }
 
                                     File.Copy(sourcePath, targetPath, overwrite: true);
-
-                                    _logger.Log($"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Success);
                                 }
+
+                                movedFiles++;
+
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    _logger.Log($"Moved '{file.FileName}' to '{instrument.Name}'", LogLevel.Success);
+                                });
                             }
                             catch (Exception ex)
                             {
-                                _logger.Log($"Error moving '{file.FileName}' to '{instrument.Name}': {ex.Message}", LogLevel.Error);
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    _logger.Log($"Error moving '{file.FileName}' to '{instrument.Name}': {ex.Message}", LogLevel.Error);
+                                });
                             }
                         }
                     }
@@ -423,6 +430,7 @@ namespace LibraryManager.ViewModels
                     _logger.Log("No files were moved", LogLevel.Error);
                 }
 
+                await Task.Delay(1500);
                 await RefreshDataAsync();
 
             }

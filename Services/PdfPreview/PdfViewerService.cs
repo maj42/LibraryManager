@@ -23,7 +23,11 @@ namespace LibraryManager.Services.PdfPreview
                 _document?.Dispose();
                 _currentFileStream?.Dispose();
                 
-                _currentFileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                _currentFileStream = new FileStream(
+                    filePath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete);
                 _document = PdfDocument.Load(_currentFileStream);
                 return true;
             }

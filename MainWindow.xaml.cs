@@ -109,8 +109,19 @@ namespace LibraryManager
                 tb.CaretIndex = tb.Text.Length;
 
                 vm.ProgramName = tb.Text;
-
                 vm.ClearCurrentSuggestion();
+
+                if (e.Key == Key.Enter && vm.SetProgramCommand?.CanExecute(null) == true)
+                    vm.SetProgramCommand.Execute(null);
+
+                e.Handled |= true;
+                return;
+            }
+
+            if (string.IsNullOrEmpty(vm.CurrentSuggestionDisplay) && e.Key == Key.Enter)
+            {
+                if (vm.SetProgramCommand?.CanExecute(null) == true)
+                    vm.SetProgramCommand.Execute(null);
 
                 e.Handled |= true;
                 return;
